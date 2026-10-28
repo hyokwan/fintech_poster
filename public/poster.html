@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>학과 포스터 편집</title>
+<link rel="stylesheet" href="app.css">
+<style>
+  body { font-family: 'Pretendard', system-ui, sans-serif; }
+  .viewport { width: 100%; position: relative; }
+  .tools-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 13px; color: var(--muted); }
+
+  /* ---------- 포스터 (1240×1754 = A4 비율, 저장 시 2배 → 2480×3508) ---------- */
+  .poster {
+    --p-bg: #0b0c14; --p-card: #141624; --p-line: #262a3c;
+    --c1: #d4f53c; --c2: #a99bff; --c3: #ff8a65; --label: #8f9bff; --muted: #c5c8d4;
+    position: absolute; top: 0; left: 0; transform-origin: 0 0;
+    width: 1240px; height: 1754px; padding: 44px 64px 0; overflow: hidden;
+    background: var(--p-bg); color: #fff; font-family: 'Pretendard', sans-serif; letter-spacing: -0.02em;
+    border-radius: 6px; box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  }
+  .poster * { box-sizing: border-box; }
+  .decor { position: absolute !important; inset: 0; pointer-events: none; }
+  .decor .ring { position: absolute; border: 1.5px solid rgba(255,255,255,0.13); border-radius: 50%; pointer-events: none; }
+  .decor .r1 { width: 600px; height: 600px; left: 816px; top: 140px; }
+  .decor .r2 { width: 440px; height: 440px; left: 896px; top: 220px; }
+  .decor .dot { position: absolute; width: 22px; height: 22px; border-radius: 50%; background: var(--c1); left: 1098px; top: 204px; }
+  .poster.no-decor .decor { display: none; }
+  .p-top, .poster > div { position: relative; }
+  .p-top { display: flex; justify-content: space-between; align-items: center; height: 76px; }
+  .logo { height: 76px; display: flex; align-items: center; }
+  .logo img { height: 76px; width: auto; display: block; border-radius: 14px; }
+  .adm { font-size: 17px; font-weight: 700; letter-spacing: 0.22em; color: #c9ccd8; }
+  .pill { display: inline-block; margin-top: 33px; height: 48px; line-height: 48px; padding: 0 20px; border-radius: 24px; background: var(--c1); color: #0b0c14; font-size: 26px; font-weight: 800; }
+  .h-school { margin-top: 26px; font-size: 64px; font-weight: 800; line-height: 1.15; }
+  .h-dept { margin-top: 8px; font-size: 112px; font-weight: 900; line-height: 1.08; color: var(--c1); letter-spacing: -0.04em; }
+  .h-recruit { font-size: 112px; font-weight: 900; line-height: 1.08; letter-spacing: -0.04em; }
+  .h-course { font-size: 40px; font-weight: 700; color: var(--c2); margin-left: 20px; letter-spacing: -0.02em; }
+  .h-sub { margin-top: 22px; font-size: 27px; font-weight: 600; color: var(--muted); }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 17px; }
+  .card { background: var(--p-card); border: 1px solid var(--p-line); border-radius: 22px; }
+  .stats { margin-top: 18px; }
+  .stat { height: 143px; padding: 26px 28px; }
+  .s-label { font-size: 20px; font-weight: 600; color: #d6d8e2; }
+  .s-val { margin-top: 6px; font-size: 56px; font-weight: 800; letter-spacing: -0.03em; white-space: nowrap; }
+  .c1 { color: var(--c1); }
+  .programs { margin-top: 16px; }
+  .prog { height: 297px; padding: 28px; }
+  .prog[data-tone="1"] { --tone: var(--c1); }
+  .prog[data-tone="2"] { --tone: var(--c2); }
+  .prog[data-tone="3"] { --tone: var(--c3); }
+  .badge { display: inline-block; padding: 5px 14px; border-radius: 16px; background: var(--tone); color: #0b0c14; font-size: 16px; font-weight: 800; }
+  .prog-title { margin-top: 14px; font-size: 26px; font-weight: 800; }
+  .prog-title .en { color: var(--tone); font-weight: 500; }
+  .prog-desc { margin-top: 12px; font-size: 17px; line-height: 1.65; color: #cfd2dc; min-height: 56px; }
+  .prog hr { border: 0; border-top: 1px solid var(--p-line); margin: 16px 0 12px; }
+  .prog ul { list-style: none; margin: 0; padding: 0; }
+  .prog li { position: relative; padding-left: 24px; font-size: 15px; line-height: 29px; color: #cfd2dc; }
+  .prog li::before { content: ''; position: absolute; left: 3px; top: 9px; width: 10px; height: 5px; border-left: 2px solid var(--tone); border-bottom: 2px solid var(--tone); transform: rotate(-45deg); }
+  .info { margin-top: 16px; border-top: 1px solid var(--p-line); }
+  .info-row { display: grid; grid-template-columns: 154px 1fr; align-items: center; height: 65px; border-bottom: 1px solid var(--p-line); }
+  .info-row .k { font-size: 18px; font-weight: 700; color: var(--label); padding-left: 4px; }
+  .info-row .v { font-size: 27px; font-weight: 700; }
+  .info-row .v b { color: var(--c1); font-weight: 700; }
+  .sched { margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 17px; }
+  .sched .card { height: 147px; display: flex; align-items: center; gap: 22px; padding: 0 28px; }
+  .round { flex: none; width: 76px; height: 76px; border-radius: 50%; display: grid; place-items: center; font-size: 26px; font-weight: 800; color: #0b0c14; }
+  .round.t1 { background: var(--c1); } .round.t2 { background: var(--c2); }
+  .sched small { display: block; font-size: 14px; color: #b9bccb; margin-bottom: 2px; }
+  .sched b { display: block; font-size: 19px; font-weight: 700; margin-bottom: 10px; }
+  .sched b:last-child { margin-bottom: 0; }
+  .extra { margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 0 34px; font-size: 17px; line-height: 1.6; color: #d6d8e2; }
+  .ex-row { display: grid; grid-template-columns: 92px 1fr; margin-bottom: 8px; }
+  .ex-row .k { font-weight: 800; color: #fff; }
+  .ex-row .v small { font-size: 13px; color: #a9acbb; }
+  .cta { position: absolute !important; left: 64px; right: 64px; bottom: 40px; height: 76px; border-radius: 20px; background: var(--c1); color: #0b0c14; display: flex; align-items: center; justify-content: center; gap: 16px; font-size: 28px; font-weight: 800; }
+  .cta svg { width: 34px; height: 24px; flex: none; }
+
+  /* 편집 모드 표시 (저장 시에는 꺼짐) */
+  .poster.editing [data-k] { outline: 1px dashed transparent; outline-offset: 3px; cursor: text; }
+  .poster.editing [data-k]:hover { outline-color: rgba(255,255,255,0.45); }
+  .poster.editing [data-k]:focus { outline: 2px solid #5b8cff; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Creator <span>Studio</span></h1>
+  <nav><a href="/">유튜브 썸네일</a><a href="/poster.html" class="on">학과 포스터</a><a href="/social.html">인스타·페이스북</a></nav>
+  <div class="size-info">A4 · 2480 × 3508 (300dpi)</div>
+</header>
+
+<div class="wrap">
+  <div class="stage">
+    <div class="tools-top"><span>✏️ 포스터 위 글씨를 직접 클릭해서 수정하세요. (Enter = 줄바꿈, Ctrl+Z = 되돌리기)</span></div>
+    <div class="viewport" id="viewport">
+      <div class="poster editing" id="poster">
+        <div class="decor"><i class="ring r1"></i><i class="ring r2"></i><i class="dot"></i></div>
+
+        <div class="p-top">
+          <div class="logo"><img id="logoImg" alt=""></div>
+          <div class="adm" data-k="adm">ADMISSION 2027</div>
+        </div>
+        <div class="pill" data-k="pill">2027년도</div>
+        <div class="h-school" data-k="school">한국폴리텍대학</div>
+        <div class="h-dept" data-k="dept">AI핀테크융합과</div>
+        <div class="h-recruit"><span data-k="recruit">교육생 모집</span><span class="h-course" data-k="course">(대졸자 과정)</span></div>
+        <div class="h-sub" data-k="subjects">인공지능/블록체인/인프라/웹개발 교육</div>
+
+        <div class="grid3 stats">
+          <div class="card stat"><div class="s-label" data-k="s1l">평균 취업률</div><div class="s-val c1" data-k="s1v">약 90%</div></div>
+          <div class="card stat"><div class="s-label" data-k="s2l">취업연봉(1년)</div><div class="s-val" data-k="s2v">3200~6500</div></div>
+          <div class="card stat"><div class="s-label" data-k="s3l">취업알선/사후지도</div><div class="s-val" data-k="s3v">100%</div></div>
+        </div>
+
+        <div class="grid3 programs">
+          <div class="card prog" data-tone="1">
+            <span class="badge" data-k="p1b">인공지능</span>
+            <div class="prog-title"><span data-k="p1t">인공지능</span> <span class="en" data-k="p1e">Program</span></div>
+            <div class="prog-desc" data-k="p1d">업체와 협업 구성한<br>인공지능 프로그램</div>
+            <hr>
+            <ul><li data-k="p1l1">소그룹지도를 통한 실력 향상!</li><li data-k="p1l2">업체가 원하는 기술로 구성한 커리큘럼</li><li data-k="p1l3">수업 후 스터디로 부족한 영역 보완!</li></ul>
+          </div>
+          <div class="card prog" data-tone="2">
+            <span class="badge" data-k="p2b">블록체인</span>
+            <div class="prog-title"><span data-k="p2t">블록체인/인프라</span> <span class="en" data-k="p2e">Program</span></div>
+            <div class="prog-desc" data-k="p2d">블록체인 구현<br>인프라 구성 실습</div>
+            <hr>
+            <ul><li data-k="p2l1">프로젝트형 팀 실습</li><li data-k="p2l2">모듈별 설명을 통한 완벽 이해</li><li data-k="p2l3">실 서버환경에서 인프라 구축 실습</li></ul>
+          </div>
+          <div class="card prog" data-tone="3">
+            <span class="badge" data-k="p3b">웹개발</span>
+            <div class="prog-title"><span data-k="p3t">웹개발</span> <span class="en" data-k="p3e">Program</span></div>
+            <div class="prog-desc" data-k="p3d">개발부터 실제 웹상에<br>배포까지 배우는 실습</div>
+            <hr>
+            <ul><li data-k="p3l1">단계별 기본 Java 학습</li><li data-k="p3l2">협력업체가 원하는 개발요소로만 구성</li><li data-k="p3l3">혼자 힘으로 운영까지 전과정 실습</li></ul>
+          </div>
+        </div>
+
+        <div class="info">
+          <div class="info-row"><div class="k" data-k="i1k">모집인원</div><div class="v" data-k="i1v">20명 (1차: 7명, 2차 13명)</div></div>
+          <div class="info-row"><div class="k" data-k="i2k">교육기간</div><div class="v" data-k="i2v">2027년 03월 ~ 2028년 02월 (1년)</div></div>
+          <div class="info-row"><div class="k" data-k="i3k">교육장소</div><div class="v" data-k="i3v">한국폴리텍대학 서울강서캠퍼스 (우장산역 인근)</div></div>
+          <div class="info-row"><div class="k" data-k="i4k">원서접수</div><div class="v" data-k="i4v"><b>www.hkcode.co.kr</b> 접속 후 원서접수 링크 클릭!</div></div>
+        </div>
+
+        <div class="sched">
+          <div class="card"><div class="round t1" data-k="r1">1차</div><div>
+            <small data-k="r1a">접수기간</small><b data-k="r1b">2026년 11월 02일 (월) ~ 2026년 12월 04일 (금)</b>
+            <small data-k="r1c">면접</small><b data-k="r1d">2026년 12월 10일 (목) / 발표 12월 18일(금)</b>
+          </div></div>
+          <div class="card"><div class="round t2" data-k="r2">2차</div><div>
+            <small data-k="r2a">접수기간</small><b data-k="r2b">2026년 12월 04일 (금) ~ 2027년 01월 28일 (목)</b>
+            <small data-k="r2c">면접</small><b data-k="r2d">2027년 02월 02일 (화) / 발표 02월 15일(월)</b>
+          </div></div>
+        </div>
+
+        <div class="extra">
+          <div>
+            <div class="ex-row"><div class="k" data-k="e1k">지원자격</div><div class="v" data-k="e1v">만 39세 이하(87년 3월3일 이후 출생자) 및<br>초대졸 이상 또는 동등 이상 자격자 <small>(정보처리 산업기사 등 소유자)</small></div></div>
+            <div class="ex-row"><div class="k" data-k="e2k">위치</div><div class="v" data-k="e2v">지하철 5호선 우장산역 2번 출구 도보 10분</div></div>
+          </div>
+          <div>
+            <div class="ex-row"><div class="k" data-k="e3k">입학문의</div><div class="v" data-k="e3v">카카오 채널 “한국폴리텍대학 스마트금융과”<br>이메일 : haiteam@kopo.ac.kr / wyhwang@kopo.ac.kr</div></div>
+          </div>
+        </div>
+
+        <div class="cta">
+          <svg viewBox="0 0 34 24"><rect width="34" height="24" rx="6" fill="#0b0c14"/><path d="M13.5 7v10l9-5z" fill="var(--c1)"/></svg>
+          <span data-k="cta">유튜브에서 “AI핀테크융합과”를 검색하세요.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <aside>
+    <div class="group">
+      <h3>포인트 색상</h3>
+      <div class="swatches" id="accents"></div>
+    </div>
+    <div class="group">
+      <h3>배경 색상</h3>
+      <div class="swatches" id="bgs"></div>
+    </div>
+    <div class="group">
+      <h3>로고</h3>
+      <label>로고 이미지 교체 (비워두면 원본 전단지의 로고 사용)</label>
+      <input type="file" id="logoFile" accept="image/*">
+      <label class="check"><input type="checkbox" id="decor" checked> 오른쪽 위 원형 장식 표시</label>
+    </div>
+    <div class="group">
+      <h3>저장</h3>
+      <label>저장 형식</label>
+      <div class="seg" id="quality">
+        <button data-v="print" class="on">인쇄용 PNG<small>2480×3508</small></button>
+        <button data-v="web">웹/SNS용 JPG<small>1240×1754</small></button>
+      </div>
+      <label>파일 이름</label>
+      <input type="text" id="fileName" value="AI핀테크융합과_포스터">
+      <div class="btns" style="margin-top:10px">
+        <button class="btn primary" id="save">💾 포스터 저장하기</button>
+        <button class="btn ghost" id="reset">원본 문구로 되돌리기</button>
+      </div>
+      <div class="status" id="status"></div>
+    </div>
+  </aside>
+</div>
+
+<script src="vendor/html-to-image.js"></script>
+<script src="common.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const poster = $('poster');
+const viewport = $('viewport');
+const PW = 1240, PH = 1754;
+const STORE_KEY = 'poster-studio-v1';
+
+const ACCENTS = ['#d4f53c', '#3cf5c4', '#4fc3ff', '#ffc53c', '#ff7ab6'];
+const BGS = ['#0b0c14', '#0a1230', '#14102a', '#000000'];
+const editables = [...poster.querySelectorAll('[data-k]')];
+const ORIGINAL = Object.fromEntries(editables.map((el) => [el.dataset.k, el.innerHTML]));
+const state = { accent: ACCENTS[0], bg: BGS[0], decor: true, quality: 'print', logo: null, text: {} };
+
+// ---------- 화면 크기에 맞게 축소 표시 ----------
+function fit() {
+  const s = viewport.clientWidth / PW;
+  poster.style.transform = `scale(${s})`;
+  viewport.style.height = PH * s + 'px';
+}
+new ResizeObserver(fit).observe(viewport);
+
+// ---------- 편집 ----------
+editables.forEach((el) => {
+  el.contentEditable = 'true';
+  el.spellcheck = false;
+  el.addEventListener('input', () => { state.text[el.dataset.k] = el.innerHTML; persist(); });
+  // 다른 곳에서 복사한 서식이 섞이지 않도록 일반 텍스트로만 붙여넣기
+  el.addEventListener('paste', (e) => {
+    e.preventDefault();
+    document.execCommand('insertText', false, e.clipboardData.getData('text/plain'));
+  });
+});
+
+function swatches(box, list, key) {
+  box.innerHTML = '';
+  list.forEach((c) => {
+    const b = document.createElement('button');
+    b.style.background = c;
+    b.style.borderColor = state[key] === c ? '#fff' : '#333a50';
+    b.onclick = () => { state[key] = c; apply(); persist(); };
+    box.appendChild(b);
+  });
+}
+
+function apply() {
+  poster.style.setProperty('--c1', state.accent);
+  poster.style.setProperty('--p-bg', state.bg);
+  poster.classList.toggle('no-decor', !state.decor);
+  $('decor').checked = state.decor;
+  swatches($('accents'), ACCENTS, 'accent');
+  swatches($('bgs'), BGS, 'bg');
+  $('quality').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.v === state.quality));
+}
+
+async function applyLogo() {
+  try {
+    $('logoImg').src = state.logo || await Studio.posterLogo();
+  } catch (e) {
+    $('logoImg').removeAttribute('src');
+  }
+}
+
+$('decor').onchange = (e) => { state.decor = e.target.checked; apply(); persist(); };
+$('quality').querySelectorAll('button').forEach((b) => { b.onclick = () => { state.quality = b.dataset.v; apply(); persist(); }; });
+$('logoFile').onchange = async (e) => {
+  if (!e.target.files[0]) return;
+  state.logo = await Studio.loadImageFile(e.target.files[0]);
+  applyLogo(); persist();
+};
+$('reset').onclick = () => {
+  if (!confirm('포스터 문구를 원본 전단지 내용으로 되돌릴까요?')) return;
+  editables.forEach((el) => { el.innerHTML = ORIGINAL[el.dataset.k]; });
+  state.text = {};
+  persist();
+};
+
+// ---------- 이 브라우저에 자동 저장 ----------
+function persist() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {
+    // 로고 이미지가 너무 크면 로고만 빼고 저장
+    try { localStorage.setItem(STORE_KEY, JSON.stringify({ ...state, logo: null })); } catch (e2) {}
+  }
+}
+try {
+  const saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+  if (saved) Object.assign(state, saved);
+} catch (e) {}
+editables.forEach((el) => { if (state.text[el.dataset.k] != null) el.innerHTML = state.text[el.dataset.k]; });
+
+// ---------- 저장 ----------
+$('save').onclick = async () => {
+  const btn = $('save');
+  btn.disabled = true; btn.textContent = '이미지 만드는 중…';
+  document.activeElement && document.activeElement.blur();
+  poster.classList.remove('editing');
+  try {
+    await document.fonts.ready;
+    const ratio = state.quality === 'print' ? 2 : 1;
+    const canvas = await htmlToImage.toCanvas(poster, {
+      width: PW, height: PH, pixelRatio: ratio,
+      style: { transform: 'none', borderRadius: '0', boxShadow: 'none' },
+    });
+    const dataUrl = state.quality === 'print' ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', 0.92);
+    await Studio.save(dataUrl, $('fileName').value, 'poster', $('status'));
+  } catch (e) {
+    $('status').textContent = '저장 실패: ' + e.message;
+    $('status').className = 'status err';
+  } finally {
+    poster.classList.add('editing');
+    btn.disabled = false; btn.textContent = '💾 포스터 저장하기';
+  }
+};
+
+apply();
+applyLogo();
+fit();
+</script>
+</body>
+</html>

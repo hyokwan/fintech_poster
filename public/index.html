@@ -1,0 +1,709 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>썸네일 스튜디오</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header>
+  <h1>Creator <span>Studio</span></h1>
+  <nav><a href="/" class="on">유튜브 썸네일</a><a href="/poster.html">학과 포스터</a><a href="/social.html">인스타·페이스북</a></nav>
+  <div class="size-info">1280 × 720 · YouTube 권장 규격</div>
+</header>
+
+<div class="wrap">
+  <div class="stage">
+    <canvas id="c" width="1280" height="720"></canvas>
+    <div class="hint">
+      제목·하이라이트에서 <code>*별표*</code>로 감싼 단어는 강조색으로 표시됩니다. 줄바꿈은 Enter.<br>
+      저장하면 브라우저 다운로드 + 서버의 <code>output/</code> 폴더에 동시에 저장됩니다. 2MB 초과 시 자동으로 JPG로 저장됩니다.
+    </div>
+    <div class="yt">
+      <canvas id="mini" width="480" height="270"></canvas>
+      <div class="meta"><b id="miniTitle">유튜브 목록에서 보이는 크기 미리보기</b>작은 화면에서도 글씨가 읽히는지 확인하세요.</div>
+    </div>
+  </div>
+
+  <aside>
+    <div class="group">
+      <h3>레이아웃</h3>
+      <select id="layout">
+        <option value="note">노트 (기존 채널 스타일)</option>
+        <option value="neon">네온 (다크 테크)</option>
+      </select>
+    </div>
+
+    <div class="group">
+      <h3>색상</h3>
+      <div class="themes" id="themes"></div>
+    </div>
+
+    <div class="group">
+      <h3>텍스트</h3>
+      <div class="row">
+        <div><label>태그</label><input type="text" id="tag" value="AI"></div>
+        <div><label>연도/라벨</label><input type="text" id="year" value="2027"></div>
+      </div>
+      <label>메인 제목</label>
+      <textarea id="title" rows="2">AI 서브타이틀에디터
+쉽게 *활용*해보자</textarea>
+      <label>하이라이트 (큰 글씨)</label>
+      <input type="text" id="highlight" value="영상에 자막넣기">
+      <label>서브 문구</label>
+      <input type="text" id="sub" value="클릭 몇 번이면 자막 완성~">
+      <label>동그라미 메모 (Enter로 줄바꿈)</label>
+      <textarea id="sticker" rows="2">AI 활용
+자막 자동생성</textarea>
+    </div>
+
+    <div class="group note-only">
+      <h3>노트 스타일 옵션</h3>
+      <label>*강조* 단어 표현</label>
+      <select id="accentStyle">
+        <option value="navy">네이비 글씨 (차분하게)</option>
+        <option value="marker">노란 형광펜</option>
+        <option value="none">강조 없음</option>
+      </select>
+      <label class="check"><input type="checkbox" id="depth"> 글씨 입체 그림자</label>
+      <label class="check"><input type="checkbox" id="sparkle" checked> 배경 반짝이 장식</label>
+    </div>
+
+    <div class="group neon-only">
+      <h3>오른쪽 비주얼</h3>
+      <select id="visual">
+        <option value="chip">GPU 칩 그래픽</option>
+        <option value="image">업로드 이미지</option>
+        <option value="none">없음</option>
+      </select>
+      <div class="row">
+        <div><label>칩 이름</label><input type="text" id="chipLabel" value="B200"></div>
+        <div><label>칩 설명</label><input type="text" id="chipSub" value="192GB HBM3e"></div>
+      </div>
+      <label>이미지 업로드 (인물/제품 사진)</label>
+      <input type="file" id="img" accept="image/*">
+    </div>
+
+    <div class="group">
+      <h3>크기 조절</h3>
+      <label>제목 크기 <span id="titleSizeV"></span></label>
+      <input type="range" id="titleSize" min="60" max="150" value="104">
+      <label>하이라이트 크기 <span id="hlSizeV"></span></label>
+      <input type="range" id="hlSize" min="36" max="130" value="104">
+      <label class="check"><input type="checkbox" id="showSticker" checked> 메모/스티커 표시</label>
+      <label class="check neon-only"><input type="checkbox" id="showGrid" checked> 배경 그리드 표시</label>
+    </div>
+
+    <div class="group">
+      <h3>저장</h3>
+      <label>파일 이름</label>
+      <input type="text" id="fileName" value="thumbnail">
+      <div class="btns" style="margin-top:10px">
+        <button class="btn primary" id="save">💾 저장하기 (유튜브 업로드용)</button>
+        <button class="btn ghost" id="reset">기본값으로 되돌리기</button>
+      </div>
+      <div class="status" id="status"></div>
+    </div>
+  </aside>
+</div>
+
+<script src="common.js"></script>
+<script>
+const W = 1280, H = 720;
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const mini = document.getElementById('mini');
+const $ = (id) => document.getElementById(id);
+
+const HEAD = "'Black Han Sans', 'Noto Sans KR', sans-serif";
+const BODY = "'Noto Sans KR', sans-serif";
+
+const THEMES = {
+  neon:  { name: '네온',   bg: '#060914', glow1: '#2f6bff', glow2: '#a24dff', text: '#ffffff', grad: ['#5fd0ff', '#8b6bff'], hlBg: '#d4ff3a', hlText: '#0a0a0a', sub: '#b8c2e6', tagBg: '#2f6bff', tagText: '#ffffff', grid: 'rgba(120,150,255,0.07)' },
+  blue:  { name: '클린블루', bg: '#1f7bff', glow1: '#8fd0ff', glow2: '#0a3fae', text: '#ffffff', grad: ['#fff36b', '#ffd400'], hlBg: '#0b1f4d', hlText: '#ffffff', sub: '#e4efff', tagBg: '#0b1f4d', tagText: '#ffffff', grid: 'rgba(255,255,255,0.08)' },
+  fire:  { name: '파이어', bg: '#110705', glow1: '#ff4d1f', glow2: '#ffb000', text: '#ffffff', grad: ['#ffd23f', '#ff5a2e'], hlBg: '#ffffff', hlText: '#111111', sub: '#f1c9b8', tagBg: '#ff4d1f', tagText: '#ffffff', grid: 'rgba(255,140,90,0.07)' },
+  mint:  { name: '민트',   bg: '#04120f', glow1: '#00e0a4', glow2: '#007cf0', text: '#ffffff', grad: ['#7dffcf', '#22c8ff'], hlBg: '#ff3d77', hlText: '#ffffff', sub: '#a9d9cb', tagBg: '#00b386', tagText: '#ffffff', grid: 'rgba(80,255,200,0.06)' },
+};
+// 노트 레이아웃: 기존 채널 썸네일(파란 배경 + 펼친 노트) 형태를 유지한 색상 변형
+const NOTE_THEMES = {
+  // 프리미엄 계열: 진한 배경 + 아이보리 종이 + 골드 포인트 (선택 키: inkGrad, glow, tag*, pill*, memo, spark)
+  premium: { name: '프리미엄', bg: '#0f2560', bg2: '#050d26', glow: '#2f63ff', ink: '#1f4fe0', inkGrad: ['#2a62ff', '#12308f'], navy: '#071330', paper: '#fbf9f3', line: '#ece7da', mark: '#f3d77a', tagBg: '#d9b45f', tagText: '#071330', pillBg: '#071330', pillText: '#ecd28c', memo: '#c39a3e', spark: '#ecd28c' },
+  royal:   { name: '로열',     bg: '#2b1a6e', bg2: '#0e0830', glow: '#7b5cff', ink: '#4b32c8', inkGrad: ['#6a4dff', '#2c1a8a'], navy: '#120a33', paper: '#fbfaf7', line: '#ebe7f3', mark: '#ffd98a', tagBg: '#e2bf6a', tagText: '#120a33', pillBg: '#120a33', pillText: '#f0d48e', memo: '#c7a04a', spark: '#f0d48e' },
+  black:   { name: '블랙골드', bg: '#1a1a1f', bg2: '#050506', glow: '#6b5a2e', ink: '#141418', inkGrad: ['#2b2b33', '#050506'], navy: '#050506', paper: '#f8f5ec', line: '#e9e3d3', mark: '#f0d27a', tagBg: '#d4ae57', tagText: '#0a0a0c', pillBg: '#0a0a0c', pillText: '#e6c877', memo: '#b8913a', spark: '#e6c877' },
+  sky:  { name: '오리지널', bg: '#3aa0ff', bg2: '#2b8ff5', ink: '#3aa0ff', navy: '#0c3157', paper: '#ffffff', line: '#e6f1fd', mark: '#ffe45c' },
+  deep:  { name: '딥블루',   bg: '#2f6cf6', bg2: '#1f55dc', ink: '#2f6cf6', navy: '#0a1f4f', paper: '#ffffff', line: '#e5ecfd', mark: '#ffe45c' },
+  mint:  { name: '민트',     bg: '#19c39a', bg2: '#0fae86', ink: '#12b48c', navy: '#063a2f', paper: '#ffffff', line: '#e2f6f0', mark: '#fff15c' },
+  coral: { name: '코랄',     bg: '#ff6b57', bg2: '#f2543f', ink: '#ff5a45', navy: '#4a1510', paper: '#ffffff', line: '#fdebe8', mark: '#ffe45c' },
+};
+const themeByLayout = { note: 'premium', neon: 'neon' };
+let uploaded = null;
+
+const FIELDS = ['layout', 'tag', 'year', 'title', 'highlight', 'sub', 'sticker', 'accentStyle', 'depth', 'sparkle', 'visual', 'chipLabel', 'chipSub', 'titleSize', 'hlSize', 'showSticker', 'showGrid', 'fileName'];
+const DEFAULTS = {};
+FIELDS.forEach((f) => { const el = $(f); DEFAULTS[f] = el.type === 'checkbox' ? el.checked : el.value; });
+DEFAULTS.themes = { ...themeByLayout };
+
+// ---------- theme buttons ----------
+const themeBox = $('themes');
+function buildThemeButtons() {
+  const layout = val('layout');
+  const list = layout === 'note' ? NOTE_THEMES : THEMES;
+  document.body.dataset.layout = layout;
+  themeBox.innerHTML = '';
+  Object.entries(list).forEach(([k, t]) => {
+    const b = document.createElement('button');
+    b.textContent = t.name;
+    b.style.background = layout === 'note'
+      ? `linear-gradient(135deg, ${t.bg} 55%, ${t.navy} 55%)`
+      : `linear-gradient(135deg, ${t.bg} 30%, ${t.glow1} 75%, ${t.glow2})`;
+    b.onclick = () => { themeByLayout[layout] = k; syncThemeButtons(); render(); };
+    b.dataset.key = k;
+    themeBox.appendChild(b);
+  });
+  syncThemeButtons();
+}
+function syncThemeButtons() {
+  const cur = themeByLayout[val('layout')];
+  themeBox.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.key === cur));
+}
+
+// ---------- helpers ----------
+function val(id) { const el = $(id); return el.type === 'checkbox' ? el.checked : el.value; }
+
+function parseRich(line) {
+  // "*강조*" 구간 분리
+  const parts = line.split('*');
+  return parts.map((text, i) => ({ text, accent: i % 2 === 1 })).filter((p) => p.text);
+}
+function stripStars(s) { return s.replace(/\*/g, ''); }
+
+function fitFont(text, family, weight, size, maxW, min = 28) {
+  let fs = size;
+  ctx.font = `${weight} ${fs}px ${family}`;
+  while (ctx.measureText(text).width > maxW && fs > min) {
+    fs -= 2;
+    ctx.font = `${weight} ${fs}px ${family}`;
+  }
+  return fs;
+}
+
+// ---------- drawing ----------
+function drawBackground(t) {
+  ctx.fillStyle = t.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  const g1 = ctx.createRadialGradient(1050, 300, 0, 1050, 300, 620);
+  g1.addColorStop(0, hexA(t.glow1, 0.55));
+  g1.addColorStop(1, hexA(t.glow1, 0));
+  ctx.fillStyle = g1; ctx.fillRect(0, 0, W, H);
+
+  const g2 = ctx.createRadialGradient(150, 720, 0, 150, 720, 600);
+  g2.addColorStop(0, hexA(t.glow2, 0.45));
+  g2.addColorStop(1, hexA(t.glow2, 0));
+  ctx.fillStyle = g2; ctx.fillRect(0, 0, W, H);
+
+  if (val('showGrid')) {
+    ctx.strokeStyle = t.grid; ctx.lineWidth = 1;
+    for (let x = 0; x <= W; x += 64) { ctx.beginPath(); ctx.moveTo(x + .5, 0); ctx.lineTo(x + .5, H); ctx.stroke(); }
+    for (let y = 0; y <= H; y += 64) { ctx.beginPath(); ctx.moveTo(0, y + .5); ctx.lineTo(W, y + .5); ctx.stroke(); }
+  }
+
+  // 비네팅
+  const v = ctx.createRadialGradient(W / 2, H / 2, H * 0.4, W / 2, H / 2, W * 0.75);
+  v.addColorStop(0, 'rgba(0,0,0,0)');
+  v.addColorStop(1, 'rgba(0,0,0,0.45)');
+  ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+}
+
+function hexA(hex, a) {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+
+function drawChip(t, cx, cy, S) {
+  ctx.save();
+  // 회로 라인
+  ctx.strokeStyle = hexA(t.glow1, 0.55); ctx.lineWidth = 3; ctx.shadowColor = t.glow1; ctx.shadowBlur = 14;
+  const lines = [[-1, -0.25, -1.9, -0.25, -2.1, -0.7], [-1, 0.2, -1.6, 0.2, -1.8, 0.65], [1, -0.3, 1.5, -0.3, 1.7, -0.9], [1, 0.35, 1.6, 0.35], [0.2, 1, 0.2, 1.5], [-0.3, -1, -0.3, -1.4, -0.7, -1.6]];
+  lines.forEach((l) => {
+    ctx.beginPath();
+    ctx.moveTo(cx + l[0] * S / 2, cy + l[1] * S / 2);
+    for (let i = 2; i < l.length; i += 2) ctx.lineTo(cx + l[i] * S / 2, cy + l[i + 1] * S / 2);
+    ctx.stroke();
+    const ex = cx + l[l.length - 2] * S / 2, ey = cy + l[l.length - 1] * S / 2;
+    ctx.fillStyle = t.glow1; ctx.beginPath(); ctx.arc(ex, ey, 6, 0, Math.PI * 2); ctx.fill();
+  });
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(-0.12);
+
+  // 외곽 글로우
+  ctx.shadowColor = t.glow1; ctx.shadowBlur = 80;
+  const board = ctx.createLinearGradient(-S / 2, -S / 2, S / 2, S / 2);
+  board.addColorStop(0, '#20283f'); board.addColorStop(1, '#0a0d18');
+  ctx.fillStyle = board;
+  ctx.beginPath(); ctx.roundRect(-S / 2, -S / 2, S, S, 30); ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = hexA(t.glow1, 0.9); ctx.lineWidth = 3; ctx.stroke();
+
+  // 핀
+  ctx.fillStyle = '#d9b968';
+  const pinStep = S / 14;
+  for (let i = 1; i < 14; i++) {
+    const p = -S / 2 + i * pinStep;
+    ctx.fillRect(p - 4, -S / 2 - 14, 8, 14);
+    ctx.fillRect(p - 4, S / 2, 8, 14);
+    ctx.fillRect(-S / 2 - 14, p - 4, 14, 8);
+    ctx.fillRect(S / 2, p - 4, 14, 8);
+  }
+
+  // 다이
+  const D = S * 0.66;
+  const die = ctx.createLinearGradient(-D / 2, -D / 2, D / 2, D / 2);
+  die.addColorStop(0, '#2c3656'); die.addColorStop(0.5, '#141a2e'); die.addColorStop(1, '#262f4c');
+  ctx.fillStyle = die;
+  ctx.beginPath(); ctx.roundRect(-D / 2, -D / 2, D, D, 16); ctx.fill();
+  const edge = ctx.createLinearGradient(-D / 2, 0, D / 2, 0);
+  edge.addColorStop(0, t.grad[0]); edge.addColorStop(1, t.grad[1]);
+  ctx.strokeStyle = edge; ctx.lineWidth = 3; ctx.stroke();
+
+  // 반사광
+  ctx.save();
+  ctx.beginPath(); ctx.roundRect(-D / 2, -D / 2, D, D, 16); ctx.clip();
+  const shine = ctx.createLinearGradient(-D / 2, -D / 2, D / 4, D / 4);
+  shine.addColorStop(0, 'rgba(255,255,255,0.18)'); shine.addColorStop(0.5, 'rgba(255,255,255,0)');
+  ctx.fillStyle = shine; ctx.fillRect(-D / 2, -D / 2, D, D);
+  ctx.restore();
+
+  // 라벨
+  const label = val('chipLabel');
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const lfs = fitFont(label, HEAD, 400, D * 0.36, D * 0.85, 20);
+  const lg = ctx.createLinearGradient(-D / 2, 0, D / 2, 0);
+  lg.addColorStop(0, t.grad[0]); lg.addColorStop(1, t.grad[1]);
+  ctx.fillStyle = lg; ctx.shadowColor = t.glow1; ctx.shadowBlur = 24;
+  ctx.fillText(label, 0, -D * 0.06);
+  ctx.shadowBlur = 0;
+  const sub = val('chipSub');
+  if (sub) {
+    fitFont(sub, BODY, 700, D * 0.09, D * 0.85, 12);
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.fillText(sub, 0, D * 0.06 + lfs * 0.38);
+  }
+  ctx.restore();
+}
+
+function drawImage(t) {
+  if (!uploaded) return;
+  const x0 = 640, w = W - x0, h = H;
+  const s = Math.max(w / uploaded.width, h / uploaded.height);
+  const iw = uploaded.width * s, ih = uploaded.height * s;
+  ctx.drawImage(uploaded, x0 + (w - iw) / 2, (h - ih) / 2, iw, ih);
+  // 왼쪽으로 자연스럽게 페이드
+  const f = ctx.createLinearGradient(x0, 0, x0 + 300, 0);
+  f.addColorStop(0, t.bg); f.addColorStop(1, hexA(t.bg, 0));
+  ctx.fillStyle = f; ctx.fillRect(x0, 0, 300, H);
+}
+
+function drawTag(t, x, y) {
+  const tag = val('tag'), year = val('year');
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+  let cx = x;
+  if (tag) {
+    ctx.font = `900 30px ${BODY}`;
+    const w = ctx.measureText(tag).width + 40;
+    ctx.fillStyle = t.tagBg;
+    ctx.beginPath(); ctx.roundRect(cx, y, w, 54, 12); ctx.fill();
+    ctx.fillStyle = t.tagText; ctx.fillText(tag, cx + 20, y + 28);
+    cx += w + 12;
+  }
+  if (year) {
+    ctx.font = `700 28px ${BODY}`;
+    const w = ctx.measureText(year).width + 40;
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(cx, y + 1, w, 52, 26); ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.fillText(year, cx + 20, y + 28);
+  }
+}
+
+function drawTitle(t, x, y, maxW) {
+  const lines = val('title').split('\n').filter((l) => l.trim());
+  const base = +val('titleSize');
+  // 모든 줄이 같은 크기를 쓰도록 가장 긴 줄 기준으로 맞춤
+  let fs = base;
+  lines.forEach((l) => { fs = Math.min(fs, fitFont(stripStars(l), HEAD, 400, base, maxW)); });
+  const lh = fs * 1.08;
+  ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+  ctx.font = `400 ${fs}px ${HEAD}`;
+  lines.forEach((line, i) => {
+    const by = y + fs * 0.88 + i * lh;
+    let cx = x;
+    parseRich(line).forEach((seg) => {
+      const w = ctx.measureText(seg.text).width;
+      // 그림자
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.fillText(seg.text, cx + 5, by + 7);
+      if (seg.accent) {
+        const g = ctx.createLinearGradient(cx, by - fs, cx + w, by);
+        g.addColorStop(0, t.grad[0]); g.addColorStop(1, t.grad[1]);
+        ctx.fillStyle = g; ctx.shadowColor = hexA(t.grad[1], 0.8); ctx.shadowBlur = 30;
+      } else {
+        ctx.fillStyle = t.text; ctx.shadowBlur = 0;
+      }
+      ctx.fillText(seg.text, cx, by);
+      ctx.shadowBlur = 0;
+      cx += w;
+    });
+  });
+  return y + lines.length * lh;
+}
+
+function drawHighlight(t, x, y, maxW) {
+  const text = val('highlight');
+  if (!text) return y;
+  const fs = fitFont(text, HEAD, 400, +val('hlSize'), maxW - 48);
+  const w = ctx.measureText(text).width + 48, h = fs * 1.35;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(-0.025);
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.fillRect(8, 10, w, h);
+  ctx.fillStyle = t.hlBg;
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = t.hlText;
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+  ctx.fillText(text, 24, h / 2 + fs * 0.04);
+  ctx.restore();
+  return y + h;
+}
+
+function drawSub(t, x, y, maxW) {
+  const text = val('sub');
+  if (!text) return;
+  fitFont(text, BODY, 700, 34, maxW, 18);
+  ctx.fillStyle = t.sub; ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+  ctx.fillText(text, x, y);
+}
+
+function drawSticker(t, cx, cy) {
+  const text = val('sticker');
+  if (!text || !val('showSticker')) return;
+  const lines = text.split('\n').filter(Boolean);
+  const R = 92;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(0.2);
+  ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 8;
+  ctx.fillStyle = t.hlBg;
+  ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fill();
+  ctx.shadowColor = 'transparent';
+  ctx.setLineDash([6, 6]); ctx.strokeStyle = hexA(t.hlText === '#ffffff' ? '#ffffff' : '#000000', 0.35); ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(0, 0, R - 10, 0, Math.PI * 2); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = t.hlText; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  let fs = 30;
+  lines.forEach((l) => { fs = Math.min(fs, fitFont(l, BODY, 900, 30, R * 1.55, 14)); });
+  ctx.font = `900 ${fs}px ${BODY}`;
+  const lh = fs * 1.2;
+  lines.forEach((l, i) => ctx.fillText(l, 0, (i - (lines.length - 1) / 2) * lh));
+  ctx.restore();
+}
+
+// ---------- 노트 레이아웃 (기존 채널 형태 유지) ----------
+const P = { x: 64, y: 104, w: 1110, h: 552 };
+
+function paperPath(x, y, w, h) {
+  ctx.beginPath();
+  ctx.moveTo(x, y + 24);
+  ctx.bezierCurveTo(x + w * 0.3, y - 2, x + w * 0.7, y - 8, x + w, y + 2);
+  ctx.lineTo(x + w, y + h);
+  ctx.lineTo(x, y + h);
+  ctx.closePath();
+}
+
+function sparkle(x, y, r, color) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x, y - r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.quadraticCurveTo(x, y, x, y + r);
+  ctx.quadraticCurveTo(x, y, x - r, y);
+  ctx.quadraticCurveTo(x, y, x, y - r);
+  ctx.fill();
+}
+
+function drawNoteBackground(t) {
+  const g = ctx.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, t.bg); g.addColorStop(1, t.bg2);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  if (t.glow) {
+    // 노트 뒤로 은은하게 퍼지는 빛 → 시선이 중앙으로 모이게
+    const r = ctx.createRadialGradient(620, 340, 0, 620, 340, 760);
+    r.addColorStop(0, hexA(t.glow, 0.45)); r.addColorStop(1, hexA(t.glow, 0));
+    ctx.fillStyle = r; ctx.fillRect(0, 0, W, H);
+  }
+  ctx.fillStyle = t.glow ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.10)';
+  for (let y = 14; y < H; y += 28) for (let x = 14; x < W; x += 28) ctx.fillRect(x - 1.5, y - 1.5, 3, 3);
+  if (val('sparkle')) {
+    const s = t.spark || '#ffffff';
+    sparkle(1220, 54, 20, s);
+    sparkle(1176, 30, 9, hexA(s, 0.8));
+    sparkle(1238, 692, 12, hexA(s, 0.85));
+    sparkle(560, 46, 8, hexA(s, 0.6));
+  }
+}
+
+function drawNotebook(t) {
+  const { x, y, w, h } = P;
+  ctx.lineWidth = 3; ctx.strokeStyle = t.navy; ctx.lineJoin = 'round';
+  // 원본의 두꺼운 네이비 그림자 띠
+  ctx.fillStyle = t.navy;
+  ctx.fillRect(0, y + 40, x + w + 34, h - 40 + 22);
+  // 뒤에 겹친 페이지들
+  [2, 1].forEach((k) => {
+    const o = k * 11;
+    ctx.fillStyle = t.paper;
+    ctx.beginPath(); ctx.rect(x + o, y + 14 + o, w, h - 14 - o); ctx.fill(); ctx.stroke();
+  });
+  // 왼쪽으로 펼쳐진 페이지
+  ctx.fillStyle = t.paper;
+  ctx.beginPath();
+  ctx.moveTo(-4, y + 12); ctx.quadraticCurveTo(x * 0.5, y + 12, x, y + 24);
+  ctx.lineTo(x, y + h); ctx.lineTo(-4, y + h); ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  // 메인 페이지 + 줄
+  paperPath(x, y, w, h); ctx.fill();
+  ctx.save();
+  paperPath(x, y, w, h); ctx.clip();
+  ctx.strokeStyle = t.line; ctx.lineWidth = 2;
+  for (let yy = y + 70; yy < y + h - 10; yy += 46) {
+    ctx.beginPath(); ctx.moveTo(x + 24, yy); ctx.lineTo(x + w - 24, yy); ctx.stroke();
+  }
+  ctx.restore();
+  ctx.strokeStyle = t.navy; ctx.lineWidth = 3;
+  paperPath(x, y, w, h); ctx.stroke();
+}
+
+function drawNoteTag(t) {
+  const text = val('tag');
+  if (!text) return;
+  ctx.font = `900 40px ${BODY}`;
+  const w = Math.max(170, ctx.measureText(text).width + 80), h = 68;
+  ctx.save();
+  ctx.translate(150, 116);
+  ctx.rotate(-0.07);
+  ctx.fillStyle = t.tagBg || t.bg; ctx.strokeStyle = t.navy; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.rect(-w / 2, -h / 2, w, h); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = t.tagText || t.navy; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, 0, 3);
+  ctx.restore();
+}
+
+function drawNotePill(t) {
+  const text = val('year');
+  const x = 290, y = 124, w = 640, h = 60;
+  ctx.fillStyle = t.pillBg || t.bg; ctx.strokeStyle = t.navy; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, h / 2); ctx.fill(); ctx.stroke();
+  if (!text) return;
+  fitFont(text, HEAD, 400, 40, w - 60);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  if (!t.pillText) {
+    ctx.lineWidth = 6; ctx.strokeStyle = t.navy;
+    ctx.strokeText(text, x + w / 2, y + h / 2 + 2);
+  }
+  ctx.fillStyle = t.pillText || '#ffffff';
+  ctx.fillText(text, x + w / 2, y + h / 2 + 2);
+}
+
+function drawNoteLine(t, line, cx, by, fs) {
+  const style = val('accentStyle');
+  ctx.font = `400 ${fs}px ${HEAD}`;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  const segs = parseRich(line);
+  const total = segs.reduce((s, seg) => s + ctx.measureText(seg.text).width, 0);
+  let x = cx - total / 2;
+  segs.forEach((seg) => {
+    const w = ctx.measureText(seg.text).width;
+    const accent = seg.accent && style !== 'none';
+    if (accent && style === 'marker') {
+      ctx.fillStyle = t.mark;
+      ctx.fillRect(x - 6, by - fs * 0.4, w + 12, fs * 0.42);
+    }
+    if (val('depth')) { ctx.fillStyle = t.navy; ctx.fillText(seg.text, x, by + 6); }
+    let ink = t.ink;
+    if (t.inkGrad) {
+      ink = ctx.createLinearGradient(0, by - fs * 0.8, 0, by);
+      ink.addColorStop(0, t.inkGrad[0]); ink.addColorStop(1, t.inkGrad[1]);
+    }
+    ctx.fillStyle = accent && style === 'navy' ? t.navy : ink;
+    ctx.fillText(seg.text, x, by);
+    x += w;
+  });
+}
+
+function drawNoteMemo(t, cx, cy) {
+  const text = val('sticker');
+  if (!text || !val('showSticker')) return;
+  const lines = text.split('\n').filter(Boolean);
+  let fs = 30;
+  lines.forEach((l) => { fs = Math.min(fs, fitFont(l, BODY, 900, 30, 170, 16)); });
+  ctx.font = `900 ${fs}px ${BODY}`;
+  const tw = Math.max(...lines.map((l) => ctx.measureText(l).width));
+  const lh = fs * 1.2;
+  const rx = tw / 2 + 30, ry = (lines.length * lh) / 2 + 26;
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.fillStyle = t.navy; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  lines.forEach((l, i) => ctx.fillText(l, 0, (i - (lines.length - 1) / 2) * lh + 2));
+
+  // 손으로 그린 듯한 동그라미 (끝이 살짝 겹치게)
+  ctx.rotate(-0.12);
+  ctx.strokeStyle = t.memo || t.ink; ctx.lineWidth = 3.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath();
+  for (let a = -0.4; a <= Math.PI * 2 + 0.3; a += 0.04) {
+    const k = a / (Math.PI * 2);
+    const px = (rx + Math.sin(a * 3) * 3 + k * 8) * Math.cos(a);
+    const py = (ry + Math.cos(a * 2) * 3 + k * 6) * Math.sin(a);
+    a === -0.4 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+
+  // 별 낙서 + 연결선
+  const sx = rx * 0.78, sy = -ry - 48, R = 24;
+  ctx.beginPath();
+  for (let i = 0; i <= 10; i++) {
+    const ang = -Math.PI / 2 + 0.3 + (i * Math.PI) / 5;
+    const r = i % 2 ? R * 0.42 : R;
+    const px = sx + r * Math.cos(ang), py = sy + r * Math.sin(ang);
+    i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+  }
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(sx - 8, sy + R * 0.7);
+  ctx.quadraticCurveTo(sx - 30, sy + 40, rx * 0.45, -ry * 0.92);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function renderNote(t) {
+  drawNoteBackground(t);
+  drawNotebook(t);
+  drawNotePill(t);
+  drawNoteTag(t);
+
+  const cx = 590, maxW = 860;
+  const lines = val('title').split('\n').filter((l) => l.trim());
+  const base = +val('titleSize');
+  let fs = base;
+  lines.forEach((l) => { fs = Math.min(fs, fitFont(stripStars(l), HEAD, 400, base, maxW)); });
+  let by = 214 + fs * 0.86;
+  lines.forEach((l, i) => { drawNoteLine(t, l, cx, by, fs); if (i < lines.length - 1) by += fs * 1.12; });
+
+  const hl = val('highlight');
+  if (hl) {
+    const hfs = fitFont(stripStars(hl), HEAD, 400, +val('hlSize'), maxW);
+    by += fs * 0.14 + 44 + hfs * 0.86;
+    drawNoteLine(t, hl, cx, by, hfs);
+  }
+  const sub = val('sub');
+  if (sub) {
+    fitFont(sub, BODY, 700, 30, maxW, 16);
+    ctx.fillStyle = t.navy; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.fillText(sub, cx, Math.min(by + 58, P.y + P.h - 18));
+  }
+  drawNoteMemo(t, 1088, 404);
+}
+
+function render() {
+  const layout = val('layout');
+  if (document.body.dataset.layout !== layout) buildThemeButtons();
+  const t = (layout === 'note' ? NOTE_THEMES : THEMES)[themeByLayout[layout]];
+  ctx.save();
+  ctx.clearRect(0, 0, W, H);
+  if (layout === 'note') renderNote(t); else renderNeon(t);
+  ctx.restore();
+
+  $('titleSizeV').textContent = val('titleSize') + 'px';
+  $('hlSizeV').textContent = val('hlSize') + 'px';
+  const m = mini.getContext('2d');
+  m.imageSmoothingQuality = 'high';
+  m.drawImage(canvas, 0, 0, mini.width, mini.height);
+  $('miniTitle').textContent = stripStars(val('title')).replace(/\n/g, ' ') + ' | ' + stripStars(val('highlight'));
+  persist();
+}
+
+function renderNeon(t) {
+  drawBackground(t);
+
+  const visual = val('visual');
+  const hasVisual = visual === 'chip' || (visual === 'image' && uploaded);
+  if (visual === 'chip') drawChip(t, 1020, 380, 330);
+  if (visual === 'image') drawImage(t);
+
+  const x = 72;
+  const maxW = hasVisual ? 760 : W - 144;
+  drawTag(t, x, 70);
+  let y = drawTitle(t, x, 158, maxW);
+  y = drawHighlight(t, x + 4, y + 26, maxW);
+  drawSub(t, x + 4, y + 30, maxW);
+  drawSticker(t, hasVisual ? 1160 : 1110, hasVisual ? 590 : 560);
+}
+
+// ---------- persistence (이 브라우저에만 저장) ----------
+const STORE_KEY = 'thumb-studio-v2';
+function persist() {
+  const data = { themes: themeByLayout };
+  FIELDS.forEach((f) => { data[f] = val(f); });
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch (e) {}
+}
+function applyState(data) {
+  FIELDS.forEach((f) => {
+    if (!(f in data)) return;
+    const el = $(f);
+    if (el.type === 'checkbox') el.checked = data[f]; else el.value = data[f];
+  });
+  const th = data.themes || {};
+  if (NOTE_THEMES[th.note]) themeByLayout.note = th.note;
+  if (THEMES[th.neon]) themeByLayout.neon = th.neon;
+}
+try { const s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); if (s) applyState(s); } catch (e) {}
+
+// ---------- events ----------
+document.querySelectorAll('aside input, aside textarea, aside select').forEach((el) => {
+  if (el.type !== 'file') el.addEventListener('input', render);
+});
+$('img').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const im = new Image();
+  im.onload = () => { uploaded = im; $('visual').value = 'image'; render(); };
+  im.src = URL.createObjectURL(file);
+});
+$('reset').onclick = () => { applyState(DEFAULTS); buildThemeButtons(); render(); };
+
+
+$('save').onclick = () => {
+  // 유튜브 썸네일 최대 2MB → 넘으면 자동으로 JPG
+  const dataUrl = Studio.canvasToDataUrl(canvas, 2 * 1024 * 1024);
+  Studio.save(dataUrl, val('fileName') || 'thumbnail', 'thumbnail', $('status'));
+};
+
+// 폰트 로딩 후 다시 그리기 (캔버스는 웹폰트를 자동으로 다시 그리지 않음)
+buildThemeButtons();
+render();
+Promise.all([
+  document.fonts.load(`400 100px 'Black Han Sans'`, '가A'),
+  document.fonts.load(`900 30px 'Noto Sans KR'`, '가A'),
+  document.fonts.load(`700 30px 'Noto Sans KR'`, '가A'),
+]).then(render, render);
+document.fonts.ready.then(render);
+</script>
+</body>
+</html>

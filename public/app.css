@@ -1,0 +1,61 @@
+:root {
+  --bg: #0d0f17; --panel: #161a26; --line: #262c3d; --text: #e8ecf6; --muted: #8a93ab; --accent: #5b8cff;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Noto Sans KR', system-ui, sans-serif; }
+header { display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; border-bottom: 1px solid var(--line); }
+header h1 { font-size: 18px; margin: 0; font-weight: 900; letter-spacing: -0.02em; }
+header h1 span { color: var(--accent); }
+.wrap { display: grid; grid-template-columns: 1fr 380px; gap: 24px; padding: 24px; max-width: 1700px; margin: 0 auto; }
+@media (max-width: 1000px) { .wrap { grid-template-columns: 1fr; } }
+.stage { position: sticky; top: 24px; align-self: start; }
+canvas { width: 100%; height: auto; display: block; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.5); background: #000; }
+.hint { color: var(--muted); font-size: 13px; margin-top: 10px; line-height: 1.6; }
+.hint code { background: var(--panel); padding: 1px 6px; border-radius: 4px; color: var(--text); }
+.yt { margin-top: 18px; display: flex; gap: 16px; align-items: flex-start; }
+.yt canvas { width: 240px; border-radius: 8px; box-shadow: none; flex: none; }
+.yt .meta b { display: block; font-size: 14px; margin-bottom: 4px; }
+.yt .meta { font-size: 12px; color: var(--muted); }
+aside { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+.group { margin-bottom: 18px; }
+.group > h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 10px; }
+label { display: block; font-size: 13px; margin: 10px 0 4px; color: #c6cde0; }
+input[type=text], textarea, select { width: 100%; background: #0f121b; color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; font: inherit; font-size: 14px; }
+textarea { resize: vertical; min-height: 54px; }
+input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.themes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.themes button { height: 46px; border-radius: 10px; border: 2px solid transparent; cursor: pointer; color: #fff; font: 700 12px 'Noto Sans KR'; }
+.themes button.on { border-color: #fff; }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+.btns { display: grid; gap: 8px; }
+.btn { border: 0; border-radius: 10px; padding: 13px; font: 700 15px 'Noto Sans KR'; cursor: pointer; }
+.btn.primary { background: var(--accent); color: #fff; }
+.btn.primary:hover { filter: brightness(1.1); }
+.btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); font-size: 13px; padding: 10px; }
+.status { font-size: 12px; color: var(--muted); min-height: 18px; margin-top: 8px; word-break: break-all; }
+.status.ok { color: #6ee7a8; }
+.status.err { color: #ff8080; }
+.check { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-top: 10px; }
+body[data-layout="note"] .neon-only, body[data-layout="neon"] .note-only { display: none; }
+
+/* ---------- 공통: 로컬 폰트 / 상단 탭 ---------- */
+@font-face {
+  font-family: 'Pretendard';
+  src: url('fonts/PretendardVariable.woff2') format('woff2-variations');
+  font-weight: 45 920;
+  font-display: block;
+}
+header nav { display: flex; gap: 4px; background: #0f121b; border: 1px solid var(--line); border-radius: 10px; padding: 4px; }
+header nav a { color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 700; padding: 7px 16px; border-radius: 7px; }
+header nav a:hover { color: var(--text); }
+header nav a.on { background: var(--accent); color: #fff; }
+.size-info { font-size: 12px; color: var(--muted); }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; }
+.seg button { background: #0f121b; color: var(--muted); border: 1px solid var(--line); border-radius: 8px; padding: 8px 4px; font: 700 12px 'Noto Sans KR', sans-serif; cursor: pointer; line-height: 1.35; }
+.seg button small { display: block; font-weight: 500; font-size: 10px; opacity: .8; }
+.seg button.on { border-color: var(--accent); color: var(--text); background: #18213a; }
+.swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+.swatches button { width: 34px; height: 34px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; }
+.swatches button.on { border-color: #fff; }
+.btn.copy { background: #232a3d; color: var(--text); font-size: 13px; padding: 10px; }

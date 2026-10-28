@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SNS 홍보 이미지</title>
+<link rel="stylesheet" href="app.css">
+<style>
+  body { font-family: 'Pretendard', system-ui, sans-serif; }
+  .stage { text-align: center; }
+  #c { width: auto; max-width: 100%; max-height: calc(100vh - 150px); margin: 0 auto; border-radius: 8px; }
+  .stage .hint { text-align: left; }
+  .only-recruit, .only-video { display: none; }
+  body[data-tpl="recruit"] .only-recruit, body[data-tpl="video"] .only-video { display: block; }
+  .img-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Creator <span>Studio</span></h1>
+  <nav><a href="/">유튜브 썸네일</a><a href="/poster.html">학과 포스터</a><a href="/social.html" class="on">인스타·페이스북</a></nav>
+  <div class="size-info" id="sizeInfo"></div>
+</header>
+
+<div class="wrap">
+  <div class="stage">
+    <canvas id="c"></canvas>
+    <div class="hint">
+      제목·서브 문구에서 <code>*별표*</code>로 감싼 단어는 강조색으로 표시됩니다.<br>
+      템플릿마다 문구가 따로 저장되니, 바꿔가며 편집해도 내용이 사라지지 않습니다.
+    </div>
+  </div>
+
+  <aside>
+    <div class="group">
+      <h3>템플릿</h3>
+      <div class="seg" id="tpls">
+        <button data-v="recruit">🎓 학과 모집 홍보</button>
+        <button data-v="video">🎬 유튜브 영상 홍보</button>
+      </div>
+    </div>
+    <div class="group">
+      <h3>규격</h3>
+      <div class="seg" id="formats"></div>
+    </div>
+    <div class="group">
+      <h3>색상</h3>
+      <div class="swatches" id="accents"></div>
+      <div class="swatches" id="bgs" style="margin-top:8px"></div>
+      <label class="check"><input type="checkbox" id="showLogo" checked> 학과 로고 표시</label>
+    </div>
+
+    <div class="group">
+      <h3>문구</h3>
+      <label>상단 라벨</label><input type="text" data-f="pill">
+      <label>작은 제목</label><input type="text" data-f="small">
+      <label>메인 제목 (Enter로 줄바꿈)</label><textarea data-f="title" rows="2"></textarea>
+      <label>서브 문구</label><input type="text" data-f="sub">
+      <div class="only-recruit">
+        <label>숫자 카드 (한 줄에 하나: 라벨 | 값)</label><textarea data-f="stats" rows="3"></textarea>
+        <label>일정 안내 (한 줄에 하나)</label><textarea data-f="info" rows="2"></textarea>
+      </div>
+      <div class="only-video">
+        <label>영상 썸네일 이미지</label>
+        <div class="img-btns">
+          <button class="btn copy" id="latestThumb">최근 저장한 썸네일</button>
+          <button class="btn copy" id="pickImg">파일에서 선택</button>
+        </div>
+        <input type="file" id="imgFile" accept="image/*" hidden>
+      </div>
+      <label>하단 버튼 문구</label><input type="text" data-f="cta">
+    </div>
+
+    <div class="group">
+      <h3>게시글 문구</h3>
+      <textarea data-f="caption" rows="7"></textarea>
+      <button class="btn copy" id="copyCaption" style="width:100%;margin-top:6px">📋 게시글 문구 복사</button>
+    </div>
+
+    <div class="group">
+      <h3>저장</h3>
+      <label>파일 이름</label>
+      <input type="text" id="fileName">
+      <div class="btns" style="margin-top:10px">
+        <button class="btn primary" id="save">💾 이미지 저장하기</button>
+        <button class="btn ghost" id="reset">이 템플릿 기본 문구로 되돌리기</button>
+      </div>
+      <div class="status" id="status"></div>
+    </div>
+  </aside>
+</div>
+
+<script src="common.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const canvas = $('c');
+const ctx = canvas.getContext('2d');
+const FONT = 'Pretendard, sans-serif';
+const STORE_KEY = 'social-studio-v1';
+
+const FORMATS = {
+  feed:   { name: '인스타 피드', size: '1080×1350', w: 1080, h: 1350 },
+  square: { name: '정사각', size: '1080×1080', w: 1080, h: 1080 },
+  story:  { name: '스토리·릴스', size: '1080×1920', w: 1080, h: 1920 },
+  fb:     { name: '페이스북', size: '1200×630', w: 1200, h: 630 },
+};
+// 포스터와 같은 브랜드 색 (라임 포인트 + 퍼플 보조)
+const ACCENTS = ['#d4f53c', '#3cf5c4', '#4fc3ff', '#ffc53c', '#ff7ab6'];
+const BGS = ['#0b0c14', '#0a1230', '#14102a', '#000000'];
+const C2 = '#a99bff', CARD = '#141624', LINE = '#262a3c', MUTED = '#c5c8d4';
+
+const DEFAULTS = {
+  recruit: {
+    pill: '2027년도 교육생 모집',
+    small: '한국폴리텍대학',
+    title: '*AI핀테크융합과*\n교육생 모집',
+    sub: '*(대졸자 과정)* 인공지능/블록체인/인프라/웹개발',
+    stats: '평균 취업률 | 약 90%\n취업연봉(1년) | 3200~6500\n취업알선/사후지도 | 100%',
+    info: '1차 접수  2026.11.02 (월) ~ 12.04 (금)\n2차 접수  2026.12.04 (금) ~ 2027.01.28 (목)',
+    cta: 'www.hkcode.co.kr 에서 원서접수!',
+    caption: '🎓 2027년도 한국폴리텍대학 AI핀테크융합과 교육생 모집 (대졸자 과정)\n\n✅ 평균 취업률 약 90%\n✅ 인공지능 · 블록체인 · 인프라 · 웹개발 실무 교육\n✅ 취업알선/사후지도 100%\n\n📅 1차 접수: 2026.11.02 ~ 2026.12.04\n📅 2차 접수: 2026.12.04 ~ 2027.01.28\n👉 원서접수: www.hkcode.co.kr\n\n#한국폴리텍대학 #AI핀테크융합과 #교육생모집 #대졸자과정 #AI교육 #블록체인 #웹개발 #취업',
+  },
+  video: {
+    pill: 'NEW VIDEO',
+    small: 'AI핀테크융합과 유튜브',
+    title: 'AI 서브타이틀에디터로\n영상에 *자막* 넣기',
+    sub: '클릭 몇 번이면 자막 완성 · *지금 바로 시청*',
+    stats: '', info: '',
+    cta: '유튜브에서 “AI핀테크융합과” 검색',
+    caption: '🎬 새 영상이 올라왔어요!\n\nAI 서브타이틀에디터를 활용해서 영상에 자막 넣는 방법을 쉽게 알려드립니다.\n\n▶ 유튜브에서 "AI핀테크융합과" 검색\n\n#AI #자막 #서브타이틀 #영상편집 #유튜브 #AI핀테크융합과 #한국폴리텍대학',
+  },
+};
+
+const state = {
+  tpl: 'recruit', format: 'feed', accent: ACCENTS[0], bg: BGS[0], showLogo: true,
+  data: JSON.parse(JSON.stringify(DEFAULTS)),
+};
+let logo = null, videoImg = null;
+
+// ---------- 그리기 도우미 ----------
+const font = (w, s) => `${w} ${Math.round(s)}px ${FONT}`;
+function rr(x, y, w, h, r, fill, stroke) {
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, r);
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 2; ctx.stroke(); }
+}
+function fit(text, weight, size, maxW, min = 12) {
+  let s = size;
+  ctx.font = font(weight, s);
+  while (ctx.measureText(text).width > maxW && s > min) { s -= 1; ctx.font = font(weight, s); }
+  return s;
+}
+const strip = (s) => s.replace(/\*/g, '');
+// *강조* 구간을 다른 색으로 그리는 한 줄 텍스트 (align: left | center)
+function rich(text, x, y, size, weight, color, accent, align = 'left') {
+  ctx.font = font(weight, size); ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+  const segs = text.split('*').map((t, i) => ({ t, a: i % 2 === 1 })).filter((s) => s.t);
+  const total = segs.reduce((n, s) => n + ctx.measureText(s.t).width, 0);
+  let cx = align === 'center' ? x - total / 2 : x;
+  segs.forEach((s) => { ctx.fillStyle = s.a ? accent : color; ctx.fillText(s.t, cx, y); cx += ctx.measureText(s.t).width; });
+}
+function lines(s) { return (s || '').split('\n').filter((l) => l.trim()); }
+
+function drawBg(W, H) {
+  ctx.fillStyle = state.bg; ctx.fillRect(0, 0, W, H);
+  const cx = W * 0.88, cy = H * 0.26, r = Math.min(W, H) * 0.42;
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx, cy, r * 0.74, 0, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = state.accent;
+  ctx.beginPath(); ctx.arc(cx + r * 0.22, cy - r * 0.62, Math.max(8, W * 0.011), 0, Math.PI * 2); ctx.fill();
+}
+
+function drawHeader(W, pad, h) {
+  if (state.showLogo && logo) {
+    ctx.drawImage(logo, pad, pad, h * logo.width / logo.height, h);
+  }
+  ctx.font = font(700, h * 0.24); ctx.letterSpacing = `${h * 0.05}px`;
+  ctx.fillStyle = '#c9ccd8'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  ctx.fillText('ADMISSION 2027', W - pad, pad + h / 2);
+  ctx.letterSpacing = '0px';
+}
+
+function drawPill(text, x, y, size, align = 'left') {
+  ctx.font = font(800, size);
+  const w = ctx.measureText(text).width + size * 1.5, h = size * 1.9;
+  const px = align === 'center' ? x - w / 2 : x;
+  rr(px, y, w, h, h / 2, state.accent);
+  ctx.fillStyle = '#0b0c14'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, px + w / 2, y + h / 2 + size * 0.04);
+  return h;
+}
+
+function drawCta(text, x, y, w, h) {
+  rr(x, y, w, h, h * 0.26, state.accent);
+  const fs = fit(text, 800, h * 0.36, w - h * 1.6);
+  const tw = ctx.measureText(text).width;
+  const iw = h * 0.44, ih = iw * 0.7, gap = h * 0.18;
+  const sx = x + (w - (tw + iw + gap)) / 2, cy = y + h / 2;
+  rr(sx, cy - ih / 2, iw, ih, ih * 0.25, '#0b0c14');
+  ctx.fillStyle = state.accent; ctx.beginPath();
+  ctx.moveTo(sx + iw * 0.4, cy - ih * 0.22); ctx.lineTo(sx + iw * 0.4, cy + ih * 0.22); ctx.lineTo(sx + iw * 0.66, cy); ctx.fill();
+  ctx.fillStyle = '#0b0c14'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.font = font(800, fs);
+  ctx.fillText(text, sx + iw + gap, cy + fs * 0.04);
+}
+
+function drawStatCard(label, value, x, y, w, h, s, first) {
+  rr(x, y, w, h, 20 * s, CARD, LINE);
+  const p = Math.min(28 * s, w * 0.1);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = '#d6d8e2'; ctx.font = font(600, fit(label, 600, 22 * s, w - p * 2));
+  ctx.fillText(label, x + p, y + h * 0.36);
+  const vs = fit(value, 800, Math.min(54 * s, h * 0.42), w - p * 2);
+  ctx.fillStyle = first ? state.accent : '#ffffff';
+  ctx.fillText(value, x + p, y + h * 0.36 + vs * 1.15);
+}
+
+function drawVideoCard(x, y, w, h, s) {
+  ctx.save();
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, 24 * s); ctx.clip();
+  if (videoImg) {
+    const k = Math.max(w / videoImg.width, h / videoImg.height);
+    ctx.drawImage(videoImg, x + (w - videoImg.width * k) / 2, y + (h - videoImg.height * k) / 2, videoImg.width * k, videoImg.height * k);
+  } else {
+    ctx.fillStyle = CARD; ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#6d7186'; ctx.font = font(600, 26 * s); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('오른쪽에서 썸네일 이미지를 불러오세요', x + w / 2, y + h * 0.78);
+  }
+  ctx.restore();
+  rr(x, y, w, h, 24 * s, null, 'rgba(255,255,255,0.18)');
+  // 재생 버튼 (썸네일 글씨를 가리지 않게 오른쪽 아래 모서리)
+  const r = Math.min(w, h) * 0.085, cx = x + w - r * 1.6, cy = y + h - r * 1.6;
+  ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 24 * s;
+  ctx.fillStyle = state.accent; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#0b0c14'; ctx.beginPath();
+  ctx.moveTo(cx - r * 0.3, cy - r * 0.42); ctx.lineTo(cx - r * 0.3, cy + r * 0.42); ctx.lineTo(cx + r * 0.45, cy); ctx.fill();
+}
+
+// ---------- 세로형 (피드 / 정사각 / 스토리) ----------
+function renderVertical(W, H) {
+  const d = state.data[state.tpl];
+  const s = Math.min(W / 1080, H / 1350);
+  const pad = 72 * W / 1080;
+  const innerW = W - pad * 2;
+  const top = pad + 70 * s + 30 * s;
+  const ctaH = 96 * s, ctaY = H - pad - ctaH;
+  const titleLines = lines(d.title);
+  const base = state.tpl === 'video' ? 96 * s : 118 * s;
+  let tfs = base;
+  titleLines.forEach((l) => { tfs = Math.min(tfs, fit(strip(l), 900, base, innerW)); });
+
+  // 위에서부터 쌓을 블록 목록 (높이를 먼저 알아야 세로 가운데 정렬 가능)
+  const blocks = [];
+  if (d.pill) blocks.push({ h: 28 * s * 1.9, gap: 30 * s, draw: (y) => drawPill(d.pill, pad, y, 28 * s) });
+  if (d.small) blocks.push({ h: 58 * s, gap: 8 * s, draw: (y) => {
+    ctx.font = font(800, fit(d.small, 800, (state.tpl === 'video' ? 38 : 50) * s, innerW));
+    ctx.fillStyle = state.tpl === 'video' ? MUTED : '#ffffff'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    ctx.fillText(d.small, pad, y + 48 * s);
+  } });
+  titleLines.forEach((l) => blocks.push({ h: tfs * 1.1, gap: 0, draw: (y) => rich(l, pad, y + tfs * 0.9, tfs, 900, '#ffffff', state.accent) }));
+  if (d.sub) blocks.push({ h: 44 * s, gap: 0, pre: 18 * s, draw: (y) => {
+    const fs = fit(strip(d.sub), 600, 30 * s, innerW);
+    rich(d.sub, pad, y + 34 * s, fs, 600, MUTED, C2);
+  } });
+
+  if (state.tpl === 'recruit') {
+    const stats = lines(d.stats).slice(0, 3).map((l) => l.split('|').map((x) => x.trim()));
+    if (stats.length) blocks.push({ h: 150 * s, pre: 44 * s, gap: 0, draw: (y) => {
+      const g = 16 * s, cw = (innerW - g * (stats.length - 1)) / stats.length;
+      stats.forEach(([lab, v], i) => drawStatCard(lab || '', v || '', pad + i * (cw + g), y, cw, 150 * s, s, i === 0));
+    } });
+    lines(d.info).forEach((l, i) => blocks.push({ h: 42 * s, pre: i === 0 ? 26 * s : 0, gap: 0, draw: (y) => {
+      ctx.fillStyle = state.accent; ctx.beginPath(); ctx.arc(pad + 7 * s, y + 21 * s, 6 * s, 0, Math.PI * 2); ctx.fill();
+      ctx.font = font(600, fit(l, 600, 27 * s, innerW - 26 * s)); ctx.fillStyle = '#e3e5ee'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillText(l, pad + 26 * s, y + 22 * s);
+    } }));
+  }
+
+  const used = blocks.reduce((n, b) => n + (b.pre || 0) + b.h + b.gap, 0);
+  let avail = ctaY - 40 * s - top;
+  if (state.tpl === 'video') {
+    // 남은 공간 안에서 16:9 썸네일 카드를 최대한 크게
+    const imgPre = 40 * s;
+    const ih = Math.min(innerW * 9 / 16, avail - used - imgPre);
+    const iw = ih * 16 / 9;
+    blocks.push({ h: ih, pre: imgPre, gap: 0, draw: (y) => drawVideoCard(pad + (innerW - iw) / 2, y, iw, ih, s) });
+  }
+  const total = blocks.reduce((n, b) => n + (b.pre || 0) + b.h + b.gap, 0);
+  let y = top + Math.max(0, (avail - total) / 2);
+  blocks.forEach((b) => { y += b.pre || 0; b.draw(y); y += b.h + b.gap; });
+
+  drawHeader(W, pad, 70 * s);
+  if (d.cta) drawCta(d.cta, pad, ctaY, innerW, ctaH);
+}
+
+// ---------- 가로형 (페이스북 1200×630) ----------
+function renderLandscape(W, H) {
+  const d = state.data[state.tpl];
+  const pad = 52;
+  const ctaH = d.cta ? 62 : 0, ctaY = H - pad - ctaH;
+  const top = pad + 52 + 22, bottom = ctaY - 22;
+  const leftW = 610, rx = pad + leftW + 40, rw = W - pad - rx;
+
+  // 왼쪽 텍스트 블록
+  const titleLines = lines(d.title);
+  let tfs = 74;
+  titleLines.forEach((l) => { tfs = Math.min(tfs, fit(strip(l), 900, 74, leftW)); });
+  const parts = [];
+  if (d.pill) parts.push({ h: 40, gap: 16, draw: (y) => drawPill(d.pill, pad, y, 21) });
+  if (d.small) parts.push({ h: 40, gap: 2, draw: (y) => {
+    ctx.font = font(800, fit(d.small, 800, 32, leftW)); ctx.fillStyle = state.tpl === 'video' ? MUTED : '#fff';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.fillText(d.small, pad, y + 32);
+  } });
+  titleLines.forEach((l) => parts.push({ h: tfs * 1.08, gap: 0, draw: (y) => rich(l, pad, y + tfs * 0.9, tfs, 900, '#fff', state.accent) }));
+  if (d.sub) parts.push({ h: 34, gap: 0, pre: 10, draw: (y) => rich(d.sub, pad, y + 26, fit(strip(d.sub), 600, 22, leftW), 600, MUTED, C2) });
+  if (state.tpl === 'recruit') {
+    lines(d.info).slice(0, 2).forEach((l, i) => parts.push({ h: 30, gap: 0, pre: i === 0 ? 12 : 0, draw: (y) => {
+      ctx.fillStyle = state.accent; ctx.beginPath(); ctx.arc(pad + 5, y + 15, 4.5, 0, Math.PI * 2); ctx.fill();
+      ctx.font = font(600, fit(l, 600, 19, leftW - 20)); ctx.fillStyle = '#e3e5ee'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillText(l, pad + 18, y + 16);
+    } }));
+  }
+  const total = parts.reduce((n, p) => n + (p.pre || 0) + p.h + p.gap, 0);
+  let y = top + Math.max(0, (bottom - top - total) / 2);
+  parts.forEach((p) => { y += p.pre || 0; p.draw(y); y += p.h + p.gap; });
+
+  // 오른쪽: 숫자 카드 또는 썸네일
+  if (state.tpl === 'recruit') {
+    const stats = lines(d.stats).slice(0, 3).map((l) => l.split('|').map((x) => x.trim()));
+    const g = 12, ch = Math.min(112, (bottom - top - g * (stats.length - 1)) / stats.length);
+    let sy = top + (bottom - top - (ch * stats.length + g * (stats.length - 1))) / 2;
+    stats.forEach(([lab, v], i) => { drawStatCard(lab || '', v || '', rx, sy, rw, ch, 0.8, i === 0); sy += ch + g; });
+  } else {
+    const iw = rw, ih = iw * 9 / 16;
+    drawVideoCard(rx, top + (bottom - top - ih) / 2, iw, ih, 0.6);
+  }
+
+  drawHeader(W, pad, 52);
+  if (d.cta) drawCta(d.cta, pad, ctaY, W - pad * 2, ctaH);
+}
+
+function render() {
+  const f = FORMATS[state.format];
+  if (canvas.width !== f.w || canvas.height !== f.h) { canvas.width = f.w; canvas.height = f.h; }
+  ctx.clearRect(0, 0, f.w, f.h);
+  drawBg(f.w, f.h);
+  if (state.format === 'fb') renderLandscape(f.w, f.h); else renderVertical(f.w, f.h);
+  $('sizeInfo').textContent = `${f.name} · ${f.size}`;
+  persist();
+}
+
+// ---------- 폼 ----------
+const formFields = [...document.querySelectorAll('[data-f]')];
+function loadForm() {
+  const d = state.data[state.tpl];
+  formFields.forEach((el) => { el.value = d[el.dataset.f] ?? ''; });
+  document.body.dataset.tpl = state.tpl;
+  $('fileName').value = `${state.tpl === 'recruit' ? '학과모집' : '영상홍보'}_${FORMATS[state.format].name.replace(/[^\w가-힣]/g, '')}`;
+}
+formFields.forEach((el) => el.addEventListener('input', () => { state.data[state.tpl][el.dataset.f] = el.value; render(); }));
+
+function segButtons(box, entries, key, onPick) {
+  box.innerHTML = '';
+  entries.forEach(([v, html]) => {
+    const b = document.createElement('button');
+    b.innerHTML = html; b.dataset.v = v;
+    b.classList.toggle('on', state[key] === v);
+    b.onclick = () => { state[key] = v; onPick && onPick(); syncUI(); render(); };
+    box.appendChild(b);
+  });
+}
+function swatches(box, list, key) {
+  box.innerHTML = '';
+  list.forEach((c) => {
+    const b = document.createElement('button');
+    b.style.background = c;
+    b.style.borderColor = state[key] === c ? '#fff' : '#333a50';
+    b.onclick = () => { state[key] = c; syncUI(); render(); };
+    box.appendChild(b);
+  });
+}
+function syncUI() {
+  segButtons($('formats'), Object.entries(FORMATS).map(([k, f]) => [k, `${f.name}<small>${f.size}</small>`]), 'format', loadForm);
+  $('tpls').querySelectorAll('button').forEach((b) => {
+    b.classList.toggle('on', b.dataset.v === state.tpl);
+    b.onclick = () => { state.tpl = b.dataset.v; loadForm(); syncUI(); render(); };
+  });
+  swatches($('accents'), ACCENTS, 'accent');
+  swatches($('bgs'), BGS, 'bg');
+  $('showLogo').checked = state.showLogo;
+}
+$('showLogo').onchange = (e) => { state.showLogo = e.target.checked; render(); };
+
+function useImage(src) {
+  const im = new Image();
+  im.onload = () => { videoImg = im; render(); };
+  im.src = src;
+}
+$('pickImg').onclick = () => $('imgFile').click();
+$('imgFile').onchange = async (e) => { if (e.target.files[0]) useImage(await Studio.loadImageFile(e.target.files[0])); };
+$('latestThumb').onclick = async () => {
+  try {
+    const r = await fetch('/api/latest?kind=thumbnail');
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error);
+    useImage(j.url);
+    setStatus(`썸네일 불러옴: ${j.file}`, 'ok');
+  } catch (e) {
+    setStatus(e.message + ' — 썸네일 탭에서 먼저 저장해 주세요.', 'err');
+  }
+};
+$('copyCaption').onclick = async () => {
+  try {
+    await navigator.clipboard.writeText(state.data[state.tpl].caption || '');
+    setStatus('📋 게시글 문구를 복사했습니다. 인스타그램/페이스북에 붙여넣으세요.', 'ok');
+  } catch (e) {
+    setStatus('복사 실패: 문구를 직접 선택해서 복사해 주세요.', 'err');
+  }
+};
+$('reset').onclick = () => {
+  state.data[state.tpl] = { ...DEFAULTS[state.tpl] };
+  loadForm(); render();
+};
+function setStatus(msg, cls) { $('status').textContent = msg; $('status').className = 'status ' + cls; }
+
+$('save').onclick = () => {
+  // 인스타그램/페이스북은 업로드 시 재압축하므로 고화질 JPG가 가장 무난
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+  Studio.save(dataUrl, $('fileName').value, 'social', $('status'));
+};
+
+// ---------- 이 브라우저에 자동 저장 ----------
+function persist() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+try {
+  const saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+  if (saved) {
+    Object.assign(state, saved, { data: { ...state.data, ...saved.data } });
+    if (!FORMATS[state.format]) state.format = 'feed';
+    if (!DEFAULTS[state.tpl]) state.tpl = 'recruit';
+  }
+} catch (e) {}
+
+loadForm();
+syncUI();
+render();
+Studio.posterLogo().then((src) => { const im = new Image(); im.onload = () => { logo = im; render(); }; im.src = src; }).catch(() => {});
+document.fonts.load(font(900, 40), '가A').then(render, render);
+document.fonts.load(font(600, 40), '가A').then(render, render);
+</script>
+</body>
+</html>
