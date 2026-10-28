@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>자유 편집</title>
+<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="editor.css">
+<style>
+  /* 포스터 테마 색과 블록(기존 전단지 카드 디자인) */
+  .cv {
+    --p-bg: #0b0c14; --p-card: #141624; --p-line: #262a3c;
+    --c1: #d4f53c; --c2: #a99bff; --c3: #ff8a65; --label: #8f9bff; --muted: #c5c8d4;
+  }
+  .cv .card { background: var(--p-card); border: 1px solid var(--p-line); border-radius: 22px; }
+  .cv [data-tone="1"] { --tone: var(--c1); }
+  .cv [data-tone="2"] { --tone: var(--c2); }
+  .cv [data-tone="3"] { --tone: var(--c3); }
+  .cv .b-stat { padding: 26px 28px; }
+  .cv .s-label { font-size: 20px; font-weight: 600; color: #d6d8e2; }
+  .cv .s-val { margin-top: 6px; font-size: 56px; font-weight: 800; letter-spacing: -0.03em; white-space: nowrap; }
+  .cv .c1 { color: var(--c1); }
+  .cv .b-prog { padding: 28px; }
+  .cv .badge { display: inline-block; padding: 5px 14px; border-radius: 16px; background: var(--tone); color: #0b0c14; font-size: 16px; font-weight: 800; }
+  .cv .prog-title { margin-top: 14px; font-size: 26px; font-weight: 800; }
+  .cv .prog-title .en { color: var(--tone); font-weight: 500; }
+  .cv .prog-desc { margin-top: 12px; font-size: 17px; line-height: 1.65; color: #cfd2dc; min-height: 56px; }
+  .cv .b-prog hr { border: 0; border-top: 1px solid var(--p-line); margin: 16px 0 12px; }
+  .cv .b-prog ul { list-style: none; margin: 0; padding: 0; }
+  .cv .b-prog li { position: relative; padding-left: 24px; font-size: 15px; line-height: 29px; color: #cfd2dc; }
+  .cv .b-prog li::before { content: ''; position: absolute; left: 3px; top: 9px; width: 10px; height: 5px; border-left: 2px solid var(--tone); border-bottom: 2px solid var(--tone); transform: rotate(-45deg); }
+  .cv .b-info { display: flex; flex-direction: column; border-top: 1px solid var(--p-line); }
+  .cv .info-row { flex: 1; display: grid; grid-template-columns: 154px 1fr; align-items: center; border-bottom: 1px solid var(--p-line); }
+  .cv .info-row .k { font-size: 18px; font-weight: 700; color: var(--label); padding-left: 4px; }
+  .cv .info-row .v { font-size: 27px; font-weight: 700; }
+  .cv .info-row .v b { color: var(--c1); font-weight: 700; }
+  .cv .b-sched { display: flex; align-items: center; gap: 22px; padding: 0 28px; }
+  .cv .round { flex: none; width: 76px; height: 76px; border-radius: 50%; display: grid; place-items: center; font-size: 26px; font-weight: 800; color: #0b0c14; background: var(--tone); }
+  .cv .b-sched small { display: block; font-size: 14px; color: #b9bccb; margin-bottom: 2px; }
+  .cv .b-sched b { display: block; font-size: 19px; font-weight: 700; margin-bottom: 10px; }
+  .cv .b-sched b:last-child { margin-bottom: 0; }
+  .cv .b-extra { font-size: 17px; line-height: 1.6; color: #d6d8e2; }
+  .cv .ex-row { display: grid; grid-template-columns: 92px 1fr; margin-bottom: 8px; }
+  .cv .ex-row .k { font-weight: 800; color: #fff; }
+  .cv .ex-row .v small { font-size: 13px; color: #a9acbb; }
+  .cv .b-cta { border-radius: 20px; background: var(--c1); color: #0b0c14; display: flex; align-items: center; justify-content: center; gap: 16px; font-size: 28px; font-weight: 800; }
+  .cv .b-cta svg { width: 34px; height: 24px; flex: none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Creator <span>Studio</span></h1>
+  <nav><a href="/">유튜브 썸네일</a><a href="/poster.html">학과 포스터</a><a href="/editor.html" class="on">자유 편집</a><a href="/emblem.html">엠블럼</a><a href="/social.html">인스타·페이스북</a></nav>
+  <div class="size-info" id="sizeInfo"></div>
+</header>
+<script src="vendor/html-to-image.js"></script>
+<script src="common.js"></script>
+<script src="editor.js"></script>
+<script src="editor-poster.js"></script>
+</body>
+</html>
