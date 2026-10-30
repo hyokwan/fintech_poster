@@ -1,3 +1,6 @@
-# 자유 편집기에서 생기는 개인 작업물 (올린 사진, 작업 파일)
-uploads/
-projects/
+node_modules/
+# 서버 데이터 (DB, 학과별 업로드·작업 파일, 비밀 키)
+data/
+.env
+# 사용자가 저장한 결과물
+output/

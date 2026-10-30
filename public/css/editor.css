@@ -1,7 +1,6 @@
-/* 자유 편집기 공통 화면 (포스터·엠블럼 편집 탭이 함께 씀) */
-html, body { height: 100%; }
-body { font-family: 'Pretendard', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden; }
-.ed { flex: 1; min-height: 0; display: grid; grid-template-columns: 272px 1fr 300px; }
+/* 자유 편집기 공통 화면 (자유 편집 · 엠블럼 · 배너가 함께 씀) */
+body.shell > .ed { overflow: hidden; }
+.ed { min-height: 0; display: grid; grid-template-columns: 272px 1fr 300px; }
 .pane { background: var(--panel); overflow-y: auto; padding: 14px; }
 .pane.left { border-right: 1px solid var(--line); }
 .pane.right { border-left: 1px solid var(--line); }
@@ -106,3 +105,12 @@ body { font-family: 'Pretendard', system-ui, sans-serif; display: flex; flex-dir
 .colors button.clear, .swatches button.clear { background: repeating-conic-gradient(#c9ccd6 0 25%, #ffffff 0 50%) 0 0 / 10px 10px !important; }
 .fmt { display: flex; gap: 4px; }
 .fmt button.on { border-color: var(--accent); background: #18213a; }
+
+/* 안전 영역 안내선 (배너) */
+.overlay .zone { position: absolute; border: calc(1.5px * var(--k)) dashed rgba(255,255,255,.35); }
+.overlay .zone.main { border-color: rgba(255,214,79,.9); }
+.overlay .zone::after { content: attr(data-label); position: absolute; left: calc(6px * var(--k)); bottom: calc(100% + 4px * var(--k)); font: 600 calc(12px * var(--k)) 'Pretendard'; color: rgba(255,255,255,.75); background: rgba(0,0,0,.45); padding: calc(2px * var(--k)) calc(6px * var(--k)); border-radius: calc(4px * var(--k)); white-space: nowrap; }
+.overlay .zone.main::after { color: #ffd64f; bottom: auto; top: calc(100% + 4px * var(--k)); }
+.size-presets { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.size-presets .ib { height: auto; padding: 6px; font-size: 11px; line-height: 1.35; text-align: left; }
+.size-presets .ib b { display: block; font-size: 12px; }

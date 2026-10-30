@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>관리자</title>
+<link rel="stylesheet" href="css/app.css">
+<style>
+  .tabs3 { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 20px; }
+  .tabs3 a { padding: 10px 16px; color: var(--muted); text-decoration: none; font-weight: 700; font-size: 14px; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tabs3 a.on { color: var(--text); border-color: var(--accent); }
+  .tabs3 .n { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 4px; border-radius: 9px; background: var(--warn); color: #241a05; font-size: 11px; text-align: center; }
+  .pane2 { display: none; } .pane2.on { display: block; }
+  .memb { display: flex; flex-wrap: wrap; gap: 4px; }
+  .memb .chip button { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 0 0 4px; }
+  .assign { display: flex; gap: 6px; margin-top: 6px; }
+  .assign select { flex: 1; min-width: 0; }
+</style>
+</head>
+<body class="shell">
+<header></header>
+<div class="page">
+  <h2>관리자</h2>
+  <p class="lead">가입 승인, 학교·학과 만들기, 학과별 멤버 지정, AI 엔진과 네이버 앱 설정을 합니다.</p>
+  <nav class="tabs3" id="tabs">
+    <a href="#pending" data-t="pending">가입 승인<span class="n" id="pendingN" hidden></span></a><a href="#users" data-t="users">사용자</a><a href="#orgs" data-t="orgs">학교 · 학과</a><a href="#ai" data-t="ai">AI 엔진</a><a href="#system" data-t="system">시스템 설정</a>
+  </nav>
+
+  <section class="pane2" data-t="pending">
+    <div class="card"><table class="list"><thead><tr><th>이름 · 이메일</th><th>소속 (가입할 때 적은 내용)</th><th>가입일</th><th style="width:360px">학과에 넣고 승인</th></tr></thead><tbody id="pendingRows"></tbody></table></div>
+  </section>
+
+  <section class="pane2" data-t="users">
+    <div class="card"><table class="list"><thead><tr><th>이름 · 이메일</th><th>상태</th><th>소속 학과 · 역할</th><th>학과에 넣기</th><th></th></tr></thead><tbody id="userRows"></tbody></table></div>
+  </section>
+
+  <section class="pane2" data-t="orgs">
+    <div class="card">
+      <h3>새 학과 만들기</h3>
+      <p class="sub">다른 학교나 학과도 여기서 만들면 됩니다. 로고·카페는 그 학과의 학과 관리자가 학과 설정에서 정해요.</p>
+      <form class="inline" id="newOrg">
+        <input type="text" name="school" placeholder="학교 (예: 한국폴리텍대학)" required>
+        <input type="text" name="campus" placeholder="캠퍼스 (선택)">
+        <input type="text" name="name" placeholder="학과 (예: 스마트금융과)" required>
+        <button class="btn primary sm">만들기</button>
+      </form>
+    </div>
+    <div class="card" style="margin-top:16px"><table class="list"><thead><tr><th>학교</th><th>학과</th><th>멤버</th><th></th></tr></thead><tbody id="orgRows"></tbody></table></div>
+  </section>
+
+  <section class="pane2" data-t="system">
+    <form class="card" id="sysForm" style="max-width:760px">
+      <h3>회원가입</h3>
+      <select name="signup" style="max-width:320px"><option value="open">가입 신청 받기 (관리자 승인 후 사용)</option><option value="closed">가입 막기</option></select>
+
+      <h3 style="margin-top:24px">네이버 앱 (카페 글쓰기용)</h3>
+      <p class="sub"><a href="https://developers.naver.com/apps/#/register" target="_blank" rel="noopener">네이버 개발자센터</a>에서 앱을 등록하세요. 사용 API는 <b>네이버 로그인</b>과 <b>카페</b>, Callback URL은 <code id="cbUrl"></code></p>
+      <div class="grid2">
+        <div><label>Client ID</label><input type="text" name="naverClientId" autocomplete="off"></div>
+        <div><label>Client Secret <small class="muted" id="secretNow"></small></label><input type="password" name="naverClientSecret" placeholder="바꿀 때만 입력" autocomplete="new-password"></div>
+      </div>
+      <div class="inline" style="margin-top:18px"><button class="btn primary">저장</button><span class="status" id="sysStatus"></span></div>
+    </form>
+  </section>
+
+  <section class="pane2" data-t="ai">
+    <div class="card" style="margin-bottom:16px">
+      <h3>AI 엔진</h3>
+      <p class="sub">카페 글 초안을 쓰는 AI예요. <b>OpenAI 호환 API</b>(/v1/chat/completions)면 무엇이든 등록할 수 있어요: OpenAI, Ollama, vLLM, LM Studio 등.<br>
+        <b>글 쓰는 AI</b>와 별도로 <b>이미지 글자 읽기(OCR)</b> AI를 정해 두면, 이미지 글자를 먼저 정확히 읽은 다음 그 내용으로 글을 씁니다.</p>
+      <div class="inline">
+        <button class="btn sm" data-preset="openai">+ OpenAI</button>
+        <button class="btn sm" data-preset="ollama">+ Ollama (이 서버 PC)</button>
+        <button class="btn sm" data-preset="vllm">+ vLLM (이 서버 PC :8888)</button>
+        <button class="btn sm ghost" data-preset="custom">+ 직접 입력</button>
+      </div>
+    </div>
+    <div class="stack" id="engines"></div>
+    <div class="card" style="margin-top:16px">
+      <div class="grid2">
+        <div><label>기본 글 쓰는 AI</label><select id="defWriter"></select></div>
+        <div><label>기본 이미지 글자 읽기 (OCR)</label><select id="defOcr"></select></div>
+      </div>
+      <p class="hint">카페 글쓰기 화면에서 그때그때 바꿀 수도 있어요.</p>
+      <div class="inline" style="margin-top:12px"><button class="btn primary" id="saveAi">AI 설정 저장</button><span class="status" id="aiStatus"></span></div>
+    </div>
+  </section>
+</div>
+
+<script src="/api/me.js"></script>
+<script src="js/common.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const STATUS = { active: '사용 중', pending: '승인 대기', disabled: '중지' };
+let data = { users: [], orgs: [] };
+
+function showTab() {
+  const t = (location.hash || '#pending').slice(1);
+  document.querySelectorAll('#tabs a').forEach((a) => a.classList.toggle('on', a.dataset.t === t));
+  document.querySelectorAll('.pane2').forEach((p) => p.classList.toggle('on', p.dataset.t === t));
+}
+window.addEventListener('hashchange', showTab);
+
+const orgName = (id) => { const o = data.orgs.find((x) => x.id === id); return o ? `${o.school} · ${o.name}` : '(삭제됨)'; };
+const orgOptions = () => data.orgs.map((o) => `<option value="${o.id}">${Studio.esc(o.school)} · ${Studio.esc(o.name)}</option>`).join('');
+const roleOptions = (sel = 'editor') => ['manager', 'editor', 'viewer'].map((r) => `<option value="${r}" ${r === sel ? 'selected' : ''}>${Studio.ROLE_NAMES[r]}</option>`).join('');
+const assignBox = (uid, label) => `<div class="assign" data-assign="${uid}"><select class="o">${orgOptions()}</select><select class="r" style="max-width:120px">${roleOptions()}</select><button class="btn sm primary">${label}</button></div>`;
+
+async function load() {
+  data = await Studio.api('/api/admin/overview');
+  const pending = data.users.filter((u) => u.status === 'pending');
+  $('pendingN').hidden = !pending.length;
+  $('pendingN').textContent = pending.length;
+
+  $('pendingRows').innerHTML = pending.map((u) => `
+    <tr><td><b>${Studio.esc(u.name)}</b><br><small>${Studio.esc(u.email)}</small></td>
+      <td>${Studio.esc(u.note || '')}</td><td><small>${new Date(u.createdAt).toLocaleString('ko-KR')}</small></td>
+      <td>${assignBox(u.id, '승인')}<div class="inline" style="margin-top:6px"><button class="btn sm ghost" data-st="${u.id}:active">학과 없이 승인</button><button class="btn sm danger" data-del="${u.id}">거절(삭제)</button></div></td></tr>`).join('')
+    || '<tr><td colspan="4"><div class="empty">승인을 기다리는 사람이 없어요</div></td></tr>';
+
+  $('userRows').innerHTML = data.users.map((u) => `
+    <tr><td><b>${Studio.esc(u.name)}</b> ${u.isAdmin ? '<span class="chip active">최고 관리자</span>' : ''}<br><small>${Studio.esc(u.email)}</small></td>
+      <td><span class="chip ${u.status}">${STATUS[u.status]}</span></td>
+      <td><div class="memb">${u.orgs.map((m) => `<span class="chip">${Studio.esc(orgName(m.orgId))} · ${Studio.ROLE_NAMES[m.role]}<button data-rm="${u.id}:${m.orgId}" title="빼기">×</button></span>`).join('') || '<small class="muted">없음</small>'}</div></td>
+      <td style="min-width:300px">${assignBox(u.id, '넣기')}</td>
+      <td style="text-align:right;white-space:nowrap">
+        ${u.id === ME.id ? '' : `
+        <button class="btn sm ghost" data-st="${u.id}:${u.status === 'disabled' ? 'active' : 'disabled'}">${u.status === 'disabled' ? '다시 사용' : '중지'}</button>
+        <button class="btn sm ghost" data-admin="${u.id}:${u.isAdmin ? 0 : 1}">${u.isAdmin ? '관리자 해제' : '관리자로'}</button>
+        <button class="btn sm danger" data-del="${u.id}">삭제</button>`}</td></tr>`).join('');
+
+  $('orgRows').innerHTML = data.orgs.map((o) => `
+    <tr><td>${Studio.esc(o.school)} <small>${Studio.esc(o.campus || '')}</small></td><td><b>${Studio.esc(o.name)}</b></td><td>${o.members}명</td>
+      <td style="text-align:right;white-space:nowrap"><button class="btn sm" data-go="${o.id}">이 학과로 이동</button> <button class="btn sm danger" data-delorg="${o.id}">삭제</button></td></tr>`).join('');
+  bind();
+}
+
+function bind() {
+  const act = async (fn, okMsg) => { try { await fn(); if (okMsg) Studio.toast(okMsg, 'ok'); await load(); } catch (e) { Studio.toast(e.message, 'err'); } };
+  document.querySelectorAll('[data-assign]').forEach((box) => {
+    box.querySelector('button').onclick = () => act(() => Studio.api('/api/admin/members', { userId: +box.dataset.assign, orgId: +box.querySelector('.o').value, role: box.querySelector('.r').value }), '학과에 넣었어요');
+  });
+  document.querySelectorAll('[data-st]').forEach((b) => {
+    const [id, status] = b.dataset.st.split(':');
+    b.onclick = () => act(() => Studio.api('/api/admin/users/' + id, { status }));
+  });
+  document.querySelectorAll('[data-admin]').forEach((b) => {
+    const [id, v] = b.dataset.admin.split(':');
+    b.onclick = () => { if (confirm(v === '1' ? '최고 관리자로 만들까요? 모든 학과와 설정을 다룰 수 있게 됩니다.' : '최고 관리자에서 뺄까요?')) act(() => Studio.api('/api/admin/users/' + id, { isAdmin: v === '1' })); };
+  });
+  document.querySelectorAll('[data-del]').forEach((b) => {
+    b.onclick = () => { if (confirm('이 사용자를 삭제할까요?')) act(() => Studio.api('/api/admin/users/' + b.dataset.del, undefined, 'DELETE'), '삭제했어요'); };
+  });
+  document.querySelectorAll('[data-rm]').forEach((b) => {
+    const [userId, orgId] = b.dataset.rm.split(':');
+    b.onclick = () => act(() => Studio.api('/api/admin/members', { userId: +userId, orgId: +orgId, role: '' }));
+  });
+  document.querySelectorAll('[data-go]').forEach((b) => {
+    b.onclick = async () => { await Studio.api('/api/me/org', { orgId: +b.dataset.go }); location.href = '/settings.html'; };
+  });
+  document.querySelectorAll('[data-delorg]').forEach((b) => {
+    b.onclick = () => {
+      const name = orgName(+b.dataset.delorg);
+      if (prompt(`"${name}" 학과와 작업 파일을 모두 지웁니다. 지우려면 학과 이름을 그대로 입력하세요.`) !== name.split(' · ')[1]) return;
+      act(() => Studio.api('/api/admin/orgs/' + b.dataset.delorg, undefined, 'DELETE'), '학과를 지웠어요');
+    };
+  });
+}
+
+$('newOrg').onsubmit = async (e) => {
+  e.preventDefault();
+  try { await Studio.api('/api/admin/orgs', Object.fromEntries(new FormData(e.target))); e.target.reset(); Studio.toast('학과를 만들었어요', 'ok'); load(); }
+  catch (err) { Studio.toast(err.message, 'err'); }
+};
+
+async function loadSys() {
+  const s = await Studio.api('/api/admin/settings');
+  const f = $('sysForm');
+  f.signup.value = s.signup;
+  f.naverClientId.value = s.naverClientId;
+  f.openaiModel.value = s.openaiModel;
+  $('secretNow').textContent = s.naverClientSecret ? `(지금: ${s.naverClientSecret})` : '(없음)';
+}
+$('sysForm').onsubmit = async (e) => {
+  e.preventDefault();
+  try {
+    await Studio.api('/api/admin/settings', Object.fromEntries(new FormData(e.target)));
+    e.target.naverClientSecret.value = '';
+    $('sysStatus').textContent = '✅ 저장했어요'; $('sysStatus').className = 'status ok';
+    loadSys();
+  } catch (err) { $('sysStatus').textContent = err.message; $('sysStatus').className = 'status err'; }
+};
+$('cbUrl').textContent = location.origin + '/api/naver/callback';
+
+// ---------- AI 엔진 ----------
+const PRESETS = {
+  openai: { name: 'OpenAI', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4.1-mini', vision: true, json: true },
+  ollama: { name: 'Ollama gemma4', baseUrl: 'http://localhost:11434/v1', model: 'gemma4:e2b', vision: true, json: true },
+  vllm: { name: 'vLLM OCR', baseUrl: 'http://localhost:8888/v1', model: '', vision: true, json: true },
+  custom: { name: '새 AI', baseUrl: 'http://', model: '', vision: true, json: true },
+};
+let ai = { engines: [], writer: '', ocr: '' };
+
+function engineCard(e) {
+  const box = document.createElement('div');
+  box.className = 'card engine';
+  box.dataset.id = e.id || '';
+  box.innerHTML = `
+    <div class="grid2">
+      <div><label>이름</label><input type="text" class="f-name" value="${Studio.esc(e.name)}"></div>
+      <div><label>주소 (…/v1 까지)</label><input type="url" class="f-url" value="${Studio.esc(e.baseUrl)}" placeholder="http://localhost:11434/v1"></div>
+      <div><label>API 키 <small class="muted">(로컬 서버는 비워두기)</small></label><input type="password" class="f-key" value="${Studio.esc(e.apiKey || '')}" autocomplete="new-password"></div>
+      <div><label>모델</label><div class="inline"><input type="text" class="f-model" list="dl-${box.dataset.id || Math.random().toString(36).slice(2)}" value="${Studio.esc(e.model)}"><button type="button" class="btn sm ghost f-load">모델 불러오기</button></div><datalist></datalist></div>
+    </div>
+    <div class="inline" style="margin-top:10px">
+      <label class="check" style="margin:0"><input type="checkbox" class="f-vision" ${e.vision !== false ? 'checked' : ''}> 이미지를 읽을 수 있음 (비전)</label>
+      <label class="check" style="margin:0"><input type="checkbox" class="f-json" ${e.json !== false ? 'checked' : ''}> JSON 모드 사용</label>
+      <span style="flex:1"></span>
+      <button type="button" class="btn sm f-test" ${e.id ? '' : 'disabled title="저장한 다음 시험할 수 있어요"'}>시험</button>
+      <button type="button" class="btn sm danger f-del">삭제</button>
+    </div>
+    <div class="status f-status"></div>`;
+  const dl = box.querySelector('datalist');
+  dl.id = box.querySelector('.f-model').getAttribute('list');
+  const st = (m, c = '') => { const s = box.querySelector('.f-status'); s.textContent = m; s.className = 'status f-status ' + c; };
+  box.querySelector('.f-load').onclick = async () => {
+    st('불러오는 중…');
+    try {
+      const j = await Studio.api('/api/admin/ai/models', { baseUrl: box.querySelector('.f-url').value, apiKey: box.querySelector('.f-key').value, id: box.dataset.id });
+      dl.innerHTML = j.models.map((m) => `<option value="${Studio.esc(m)}">`).join('');
+      if (!box.querySelector('.f-model').value && j.models.length) box.querySelector('.f-model').value = j.models[0];
+      st(`✅ 연결됨 · 모델 ${j.models.length}개 (모델 칸을 누르면 목록이 보여요)`, 'ok');
+    } catch (err) { st(err.message, 'err'); }
+  };
+  box.querySelector('.f-test').onclick = async () => {
+    st('시험 중… (로컬 모델은 처음에 오래 걸릴 수 있어요)');
+    try { const j = await Studio.api('/api/admin/ai/test', { id: box.dataset.id }); st(`✅ ${j.ms}ms · ${j.reply}`, 'ok'); }
+    catch (err) { st(err.message, 'err'); }
+  };
+  box.querySelector('.f-del').onclick = () => { box.remove(); refreshDefaults(); };
+  box.querySelector('.f-name').oninput = refreshDefaults;
+  return box;
+}
+
+const readEngines = () => [...document.querySelectorAll('.engine')].map((b) => ({
+  id: b.dataset.id || undefined, name: b.querySelector('.f-name').value, baseUrl: b.querySelector('.f-url').value,
+  apiKey: b.querySelector('.f-key').value, model: b.querySelector('.f-model').value,
+  vision: b.querySelector('.f-vision').checked, json: b.querySelector('.f-json').checked,
+}));
+
+function refreshDefaults() {
+  const list = readEngines().filter((e) => e.id);
+  const opts = (sel) => list.map((e) => `<option value="${e.id}" ${e.id === sel ? 'selected' : ''}>${Studio.esc(e.name)}</option>`).join('');
+  $('defWriter').innerHTML = list.length ? opts(ai.writer) : '<option value="">(저장한 엔진이 없어요)</option>';
+  $('defOcr').innerHTML = `<option value="">쓰지 않음 (글 쓰는 AI가 이미지를 직접 봄)</option>${opts(ai.ocr)}`;
+}
+
+async function loadAi() {
+  ai = await Studio.api('/api/admin/ai');
+  $('engines').innerHTML = '';
+  ai.engines.forEach((e) => $('engines').append(engineCard(e)));
+  if (!ai.engines.length) $('engines').innerHTML = '<div class="empty">등록한 AI 엔진이 없어요. 위에서 추가하세요.</div>';
+  refreshDefaults();
+}
+document.querySelectorAll('[data-preset]').forEach((b) => {
+  b.onclick = () => {
+    $('engines').querySelector('.empty')?.remove();
+    const card = engineCard({ ...PRESETS[b.dataset.preset] });
+    $('engines').append(card);
+    card.querySelector(b.dataset.preset === 'openai' ? '.f-key' : '.f-model').focus();
+    if (b.dataset.preset !== 'openai') card.querySelector('.f-load').click(); // 로컬 서버는 모델 목록을 바로 불러옴
+  };
+});
+$('saveAi').onclick = async () => {
+  try {
+    await Studio.api('/api/admin/ai', { engines: readEngines(), writer: $('defWriter').value, ocr: $('defOcr').value });
+    $('aiStatus').textContent = '✅ 저장했어요'; $('aiStatus').className = 'status ok';
+    loadAi();
+  } catch (err) { $('aiStatus').textContent = err.message; $('aiStatus').className = 'status err'; }
+};
+
+showTab();
+load().catch((e) => Studio.toast(e.message, 'err'));
+loadSys().catch(() => {});
+loadAi().catch(() => {});
+</script>
+</body>
+</html>

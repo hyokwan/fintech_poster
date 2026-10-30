@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>학과 포스터 편집</title>
-<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="css/app.css">
 <style>
   body { font-family: 'Pretendard', system-ui, sans-serif; }
   .viewport { width: 100%; position: relative; }
@@ -82,12 +82,8 @@
   .poster.editing [data-k]:focus { outline: 2px solid #5b8cff; }
 </style>
 </head>
-<body>
-<header>
-  <h1>Creator <span>Studio</span></h1>
-  <nav><a href="/">유튜브 썸네일</a><a href="/poster.html" class="on">학과 포스터</a><a href="/editor.html">자유 편집</a><a href="/emblem.html">엠블럼</a><a href="/social.html">인스타·페이스북</a></nav>
-  <div class="size-info">A4 · 2480 × 3508 (300dpi)</div>
-</header>
+<body class="shell">
+<header><div class="size-info" id="sizeInfo">A4 · 2480 × 3508 (300dpi)</div></header>
 
 <div class="wrap">
   <div class="stage">
@@ -183,7 +179,7 @@
     </div>
     <div class="group">
       <h3>로고</h3>
-      <label>로고 이미지 교체 (비워두면 원본 전단지의 로고 사용)</label>
+      <label>로고 이미지 교체 (비워두면 학과 설정의 로고 사용)</label>
       <input type="file" id="logoFile" accept="image/*">
       <label class="check"><input type="checkbox" id="decor" checked> 오른쪽 위 원형 장식 표시</label>
     </div>
@@ -206,18 +202,22 @@
 </div>
 
 <script src="vendor/html-to-image.js"></script>
-<script src="common.js"></script>
+<script src="/api/me.js"></script>
+<script src="js/common.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 const poster = $('poster');
 const viewport = $('viewport');
 const PW = 1240, PH = 1754;
-const STORE_KEY = 'poster-studio-v1';
+const STORE_KEY = Studio.storeKey('poster-studio-v1');
 
 const ACCENTS = ['#d4f53c', '#3cf5c4', '#4fc3ff', '#ffc53c', '#ff7ab6'];
 const BGS = ['#0b0c14', '#0a1230', '#14102a', '#000000'];
 const editables = [...poster.querySelectorAll('[data-k]')];
-const ORIGINAL = Object.fromEntries(editables.map((el) => [el.dataset.k, el.innerHTML]));
+// 원본 문구 (다른 학과면 학과 이름 등을 그 학과 것으로 바꿔서)
+const ORIGINAL = Object.fromEntries(editables.map((el) => [el.dataset.k, Studio.fillDept(el.innerHTML)]));
+editables.forEach((el) => { el.innerHTML = ORIGINAL[el.dataset.k]; });
+$('fileName').value = Studio.fillDept($('fileName').value);
 const state = { accent: ACCENTS[0], bg: BGS[0], decor: true, quality: 'print', logo: null, text: {} };
 
 // ---------- 화면 크기에 맞게 축소 표시 ----------

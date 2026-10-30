@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SNS 홍보 이미지</title>
-<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="css/app.css">
 <style>
   body { font-family: 'Pretendard', system-ui, sans-serif; }
   .stage { text-align: center; }
@@ -15,12 +15,8 @@
   .img-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
 </style>
 </head>
-<body>
-<header>
-  <h1>Creator <span>Studio</span></h1>
-  <nav><a href="/">유튜브 썸네일</a><a href="/poster.html">학과 포스터</a><a href="/editor.html">자유 편집</a><a href="/emblem.html">엠블럼</a><a href="/social.html" class="on">인스타·페이스북</a></nav>
-  <div class="size-info" id="sizeInfo"></div>
-</header>
+<body class="shell">
+<header><div class="size-info" id="sizeInfo"></div></header>
 
 <div class="wrap">
   <div class="stage">
@@ -90,13 +86,14 @@
   </aside>
 </div>
 
-<script src="common.js"></script>
+<script src="/api/me.js"></script>
+<script src="js/common.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 const canvas = $('c');
 const ctx = canvas.getContext('2d');
 const FONT = 'Pretendard, sans-serif';
-const STORE_KEY = 'social-studio-v1';
+const STORE_KEY = Studio.storeKey('social-studio-v1');
 
 const FORMATS = {
   feed:   { name: '인스타 피드', size: '1080×1350', w: 1080, h: 1350 },
@@ -130,6 +127,9 @@ const DEFAULTS = {
     caption: '🎬 새 영상이 올라왔어요!\n\nAI 서브타이틀에디터를 활용해서 영상에 자막 넣는 방법을 쉽게 알려드립니다.\n\n▶ 유튜브에서 "AI핀테크융합과" 검색\n\n#AI #자막 #서브타이틀 #영상편집 #유튜브 #AI핀테크융합과 #한국폴리텍대학',
   },
 };
+
+// 다른 학과면 기본 문구 속 학과 정보를 그 학과 것으로
+for (const d of Object.values(DEFAULTS)) for (const k in d) d[k] = Studio.fillDept(d[k]);
 
 const state = {
   tpl: 'recruit', format: 'feed', accent: ACCENTS[0], bg: BGS[0], showLogo: true,

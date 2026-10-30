@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>카페 글쓰기</title>
+<link rel="stylesheet" href="css/app.css">
+<style>
+  .cafe { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 20px; align-items: start; }
+  @media (max-width: 1100px) { .cafe { grid-template-columns: 1fr; } }
+  .steps { display: grid; gap: 16px; }
+  .step-h { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .step-h .n { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 800; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; flex: none; }
+  .step-h h3 { margin: 0; font-size: 15px; }
+  .step-h .sp { flex: 1; }
+
+  .drop { border: 2px dashed var(--line2); border-radius: 14px; padding: 26px; text-align: center; color: var(--muted); font-size: 14px; cursor: pointer; transition: border-color .15s, background .15s; }
+  .drop:hover, .drop.over { border-color: var(--accent); background: rgba(109,139,255,.06); color: var(--text); }
+  .drop b { color: var(--text); }
+  .thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-top: 12px; }
+  .thumb { position: relative; border-radius: 10px; overflow: hidden; background: #0d1018; border: 1px solid var(--line); aspect-ratio: 1; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb .x { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%; border: 0; background: rgba(0,0,0,.65); color: #fff; cursor: pointer; font-size: 14px; }
+  .thumb .no { position: absolute; left: 6px; top: 6px; font-size: 11px; font-weight: 800; background: rgba(0,0,0,.65); padding: 2px 7px; border-radius: 10px; }
+  .thumb .mv { position: absolute; bottom: 6px; left: 6px; right: 6px; display: flex; justify-content: space-between; }
+  .thumb .mv button { border: 0; background: rgba(0,0,0,.65); color: #fff; border-radius: 6px; cursor: pointer; padding: 2px 8px; }
+  .recent { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+
+  .ai-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; }
+  .tones { display: flex; gap: 6px; margin-top: 8px; }
+  .tones button { flex: 1; }
+  #body { min-height: 300px; font-size: 14px; }
+  .count { font-size: 11px; color: var(--muted); text-align: right; margin-top: 4px; }
+
+  /* 미리보기 */
+  .preview { background: #fff; color: #222; border-radius: 14px; padding: 26px 28px; font-family: 'Pretendard', sans-serif; }
+  .preview .board { color: #03c75a; font-size: 13px; font-weight: 700; }
+  .preview h4 { font-size: 22px; margin: 6px 0 4px; letter-spacing: -0.03em; word-break: keep-all; }
+  .preview .meta { font-size: 12px; color: #999; padding-bottom: 14px; border-bottom: 1px solid #eee; margin-bottom: 18px; }
+  .preview .imgs img { display: block; max-width: 100%; margin: 0 auto 14px; border-radius: 4px; }
+  .preview .txt { font-size: 15px; line-height: 1.75; word-break: keep-all; }
+  .preview .txt a { color: #0068c3; }
+  .preview .empty-p { color: #aaa; }
+
+  .side { position: sticky; top: 0; display: grid; gap: 16px; }
+  .conn { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--err); flex: none; }
+  .dot.on { background: var(--ok); }
+  .opts label { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+  .result { margin-top: 10px; font-size: 13px; padding: 12px; border-radius: 10px; background: rgba(91,224,160,.08); border: 1px solid #22563c; display: none; }
+  .result a { font-weight: 700; word-break: break-all; }
+
+  dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line2); border-radius: 16px; padding: 20px; width: min(860px, 92vw); }
+  dialog::backdrop { background: rgba(0,0,0,.6); }
+  .pick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; max-height: 60vh; overflow: auto; margin: 12px 0; }
+  .pick-grid figure { margin: 0; cursor: pointer; border: 2px solid transparent; border-radius: 10px; overflow: hidden; background: #0d1018; }
+  .pick-grid figure.on { border-color: var(--accent); }
+  .pick-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
+  .pick-grid figcaption { font-size: 11px; color: var(--muted); padding: 5px 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+</style>
+</head>
+<body class="shell">
+<header></header>
+
+<div class="page">
+  <div class="cafe">
+    <div class="steps">
+      <section class="card">
+        <div class="step-h"><span class="n">1</span><h3>이미지 올리기</h3><span class="sp"></span><small class="muted" id="imgCount"></small></div>
+        <div class="drop" id="drop"><b>이미지를 끌어다 놓거나 클릭해서 고르세요</b><br>여러 장 가능 · Ctrl+V 붙여넣기도 됩니다 · 최대 10장</div>
+        <input type="file" id="file" accept="image/png,image/jpeg,image/gif,image/webp" multiple hidden>
+        <div class="recent">
+          <button class="btn sm" id="pickRecent">🗂 내가 만든 결과물에서 고르기</button>
+        </div>
+        <div class="thumbs" id="thumbs"></div>
+      </section>
+
+      <section class="card">
+        <div class="step-h"><span class="n">2</span><h3>AI로 제목·본문 쓰기</h3><span class="sp"></span><small class="muted" id="aiModel"></small></div>
+        <div class="grid2">
+          <div><label>글 쓰는 AI</label><select id="writer"></select></div>
+          <div><label>이미지 글자 읽기 (OCR)</label><select id="ocr"></select></div>
+        </div>
+        <label>추가로 넣을 내용 (선택)</label>
+        <textarea id="memo" rows="2" placeholder="예) 1차 접수 마감이 일주일 남았다는 점을 강조해 줘 / 상담 전화번호 02-000-0000 넣어 줘"></textarea>
+        <div class="tones" id="tones">
+          <button class="btn sm ghost" data-v="notice">📢 공지형</button>
+          <button class="btn sm ghost" data-v="friendly">😊 친근하게</button>
+          <button class="btn sm ghost" data-v="promo">🔥 홍보형</button>
+        </div>
+        <div class="btns" style="margin-top:12px"><button class="btn primary" id="aiBtn">✨ 이미지 보고 글 쓰기</button></div>
+        <div class="status" id="aiStatus"></div>
+        <details id="ocrBox" hidden style="margin-top:8px"><summary class="hint" style="cursor:pointer">이미지에서 읽은 글자 보기</summary><pre id="ocrText" style="white-space:pre-wrap;font-size:12px;color:var(--muted);background:#0d1018;border:1px solid var(--line);border-radius:9px;padding:10px;max-height:240px;overflow:auto"></pre></details>
+      </section>
+
+      <section class="card">
+        <div class="step-h"><span class="n">3</span><h3>다듬기</h3></div>
+        <label>제목</label>
+        <input type="text" id="title" maxlength="100" placeholder="게시글 제목">
+        <label>본문 <small class="muted">(줄바꿈은 그대로 반영, 주소는 자동으로 링크)</small></label>
+        <textarea id="body" placeholder="본문을 쓰거나, 위에서 AI로 초안을 만드세요."></textarea>
+        <div class="count" id="count"></div>
+      </section>
+    </div>
+
+    <div class="side">
+      <section class="card">
+        <div class="step-h"><span class="n">4</span><h3>카페에 올리기</h3></div>
+        <div class="conn" id="conn"></div>
+        <label>게시판</label>
+        <select id="board"></select>
+        <div class="opts">
+          <label><input type="checkbox" id="openyn"> 전체 공개 (끄면 카페 멤버만)</label>
+          <label><input type="checkbox" id="searchopen" checked> 네이버 검색 허용</label>
+          <label><input type="checkbox" id="replyyn" checked> 댓글 허용</label>
+        </div>
+        <div class="btns" style="margin-top:12px">
+          <button class="btn primary" id="postBtn">📮 카페에 올리기</button>
+        </div>
+        <div class="status" id="postStatus"></div>
+        <div class="result" id="result"></div>
+      </section>
+
+      <section>
+        <div class="preview" id="preview"></div>
+        <p class="hint">미리보기입니다. 첨부 이미지가 글 안에서 보이는 위치는 카페 화면에 따라 조금 다를 수 있어요.</p>
+      </section>
+    </div>
+  </div>
+</div>
+
+<dialog id="recentDlg">
+  <div class="inline"><h3 style="margin:0;flex:1">내가 만든 결과물</h3><button class="btn sm ghost" id="dlgClose">닫기</button></div>
+  <div class="pick-grid" id="recentGrid"></div>
+  <div class="inline" style="justify-content:flex-end"><button class="btn primary" id="dlgAdd">선택한 이미지 추가</button></div>
+</dialog>
+
+<script src="/api/me.js"></script>
+<script src="js/common.js"></script>
+<script src="js/cafe.js"></script>
+</body>
+</html>

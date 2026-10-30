@@ -24,6 +24,10 @@ const Editor = (() => {
   const nodes = new Map();
   const autoSrc = {};    // 'logo:auto' 같은 자동 이미지 → 실제 주소
 
+  // 템플릿 문구 속 학과 정보를 지금 학과 것으로
+  const fillDept = (e) => { if (e.html) e.html = Studio.fillDept(e.html); return e; };
+  // 보기·저장 권한: 화면에서 고쳐볼 수는 있지만 작업 파일은 저장하지 않음 (이미지 저장은 됨)
+  const readOnly = !Studio.can('editor');
   const uid = () => 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const byId = (id) => doc.els.find((e) => e.id === id);
   const selected = () => sel.map(byId).filter(Boolean);
@@ -149,8 +153,22 @@ const Editor = (() => {
     }
   }
 
+  // 직접 입력 규격은 페이지 크기가 doc 에 들어 있으므로 (되돌리기 포함) 늘 doc 을 따른다
+  function syncPageSize() {
+    if (doc.page.w === PAGE.w && doc.page.h === PAGE.h) return;
+    PAGE = { w: doc.page.w, h: doc.page.h };
+    $('sizeInfo').textContent = sizeText();
+    layout();
+    buildQuality();
+  }
+  function sizeText() {
+    const f = CFG.formats[fmt];
+    return f.custom ? `${f.label} · ${PAGE.w} × ${PAGE.h}` : f.info || `${f.w} × ${f.h}`;
+  }
+
   function render() {
     if (!doc) return;
+    syncPageSize();
     applyTheme();
     const ids = new Set(doc.els.map((e) => e.id));
     for (const [id, n] of nodes) if (!ids.has(id)) { n.remove(); nodes.delete(id); }
@@ -184,6 +202,11 @@ const Editor = (() => {
     if (!doc) return;
     ov.innerHTML = '';
     ov.style.setProperty('--k', 1 / scale);
+    // 안전 영역 안내선 (예: 유튜브 배너에서 모든 기기에 보이는 부분). 저장 이미지에는 안 들어감
+    for (const z of CFG.formats[fmt].zones || []) {
+      const d = box('zone' + (z.main ? ' main' : ''), z.x, z.y, z.w, z.h);
+      d.dataset.label = z.label;
+    }
     const hv = hoverId && !sel.includes(hoverId) && byId(hoverId);
     if (hv && !hv.hidden && !drag) box('box hov', hv.x, hv.y, hv.w, hv.h);
     for (const e of selected()) {
@@ -282,6 +305,7 @@ const Editor = (() => {
 
   const projectName = () => CFG.formats[fmt].project || `${CFG.project}-${fmt}`;
   function scheduleSave() {
+    if (readOnly) { $('saveState').textContent = '보기 전용 · 바뀐 내용은 저장되지 않아요 (이미지 저장은 가능)'; return; }
     $('saveState').textContent = '저장 중…';
     clearTimeout(saveTimer);
     saveTimer = setTimeout(saveNow, 600);
@@ -741,7 +765,7 @@ const Editor = (() => {
         }
       };
       const autos = Object.entries(CFG.autoImages).filter(([k]) => autoSrc[k]).map(([k, a]) => ({ name: a.label, url: k, preview: autoSrc[k] }));
-      fill($('libEmblems'), autos.concat(j.emblems), 'baseEmblem 폴더가 비어 있습니다');
+      fill($('libEmblems'), autos.concat(j.emblems), Studio.can('manager') ? '학과 설정에서 로고·엠블럼 이미지를 올려 주세요' : '학과 자료 이미지가 없습니다');
       fill($('libUploads'), j.uploads, '아직 올린 이미지가 없습니다');
     } catch (e) {}
   }
@@ -771,7 +795,7 @@ const Editor = (() => {
   // 도구의 make() 는 요소 하나를 돌려준다 (이미지처럼 크기를 재야 하면 Promise)
   async function addTool(key, at) {
     const e = await CFG.tools[key].make({ page: PAGE, resolveSrc, loadImg });
-    if (e) addEl(e, at);
+    if (e) addEl(fillDept(e), at);
   }
 
   function buildTools() {
@@ -1015,6 +1039,22 @@ const Editor = (() => {
       row.append(pick);
       return row;
     };
+    const f = CFG.formats[fmt];
+    if (f.custom) {
+      const resize = (key, v) => { doc.page[key] = Math.round(Math.min(8000, Math.max(50, v))); };
+      const presets = h('div', { className: 'size-presets' });
+      for (const [w, hh, name] of f.presets || []) {
+        const b = h('button', { className: 'ib', innerHTML: `${name ? `<b>${name}</b>` : ''}${w}×${hh}` });
+        b.onclick = () => { doc.page.w = w; doc.page.h = hh; render(); buildProps(); commit(); };
+        presets.append(b);
+      }
+      P.append(group('페이지 크기 (px)',
+        h('div', { className: 'r2' },
+          numInput(() => doc.page.w, (v) => resize('w', v), { prefix: 'W', min: 50 }),
+          numInput(() => doc.page.h, (v) => resize('h', v), { prefix: 'H', min: 50 })),
+        f.presets ? label('자주 쓰는 크기') : null,
+        f.presets ? presets : null));
+    }
     P.append(group('페이지',
       label(CFG.accentLabel), swatch(CFG.accents, 'accent'),
       label('배경 색' + (CFG.bgs.includes('transparent') ? ' (체크무늬 = 투명)' : '')), swatch(CFG.bgs, 'bg')));
@@ -1080,14 +1120,15 @@ const Editor = (() => {
 
   // ---------- 규격 / 작업 불러오기 ----------
   function newDoc() {
-    const els = CFG.defaultEls(fmt, CFG.formats[fmt]);
-    els.forEach((e) => { e.id = uid(); });
+    const els = CFG.defaultEls(fmt, CFG.formats[fmt], PAGE);
+    els.forEach((e) => { e.id = uid(); fillDept(e); });
     return { version: 1, page: pageFor({}), els };
   }
   // 크기와 모양은 늘 규격 정의를 따르고, 색만 저장된 값을 씀
   function pageFor(saved) {
     const f = CFG.formats[fmt];
-    return { bg: CFG.bgs[0], accent: CFG.accents[0], ...f.page, ...saved, w: f.w, h: f.h, round: !!f.round };
+    const size = f.custom && saved.w && saved.h ? { w: saved.w, h: saved.h } : { w: f.w, h: f.h };
+    return { bg: CFG.bgs[0], accent: CFG.accents[0], ...f.page, ...saved, ...size, round: !!f.round };
   }
 
   function buildFormats() {
@@ -1105,7 +1146,7 @@ const Editor = (() => {
   }
 
   async function loadFormat(k) {
-    if (doc) { endEdit(); if (saveTimer) await saveNow(); }
+    if (doc) { endEdit(); if (saveTimer && !readOnly) await saveNow(); }
     fmt = k;
     ui.fmt = k; persistUi();
     const f = CFG.formats[k];
@@ -1117,8 +1158,9 @@ const Editor = (() => {
       doc = newDoc();
     }
     doc.page = pageFor(doc.page);
+    PAGE = { w: doc.page.w, h: doc.page.h };
     sel = []; editing = null; hoverId = null;
-    $('sizeInfo').textContent = f.info || `${f.w} × ${f.h}`;
+    $('sizeInfo').textContent = sizeText();
     buildFormats();
     buildQuality();
     render();
@@ -1131,12 +1173,14 @@ const Editor = (() => {
 
   async function start(cfg) {
     CFG = { autoImages: {}, ...cfg };
-    uiKey = `${CFG.project}-ui`;
+    uiKey = Studio.storeKey(`${CFG.project}-ui`);
+    CFG.fileName = Studio.fillDept(CFG.fileName);
     try { ui = JSON.parse(localStorage.getItem(uiKey)) || {}; } catch (e) { ui = {}; }
     if (!CFG.exports[ui.quality]) ui.quality = Object.keys(CFG.exports)[0];
     $('fileName').value = ui.fileName || CFG.fileName;
     $('fileName').onchange = () => { ui.fileName = $('fileName').value; persistUi(); };
     $('save').textContent = CFG.saveLabel;
+    if (readOnly) $('uploadBtn').style.display = 'none';
     buildTools();
     // 자동 이미지(원본에서 잘라낸 로고 등)는 준비되는 대로 다시 그림
     const autoReady = Object.entries(CFG.autoImages).map(([k, a]) => a.load().then((u) => { autoSrc[k] = u; render(); }).catch(() => {}));

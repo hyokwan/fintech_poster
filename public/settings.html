@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>학과 설정</title>
+<link rel="stylesheet" href="css/app.css">
+<style>
+  .tabs3 { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 20px; }
+  .tabs3 a { padding: 10px 16px; color: var(--muted); text-decoration: none; font-weight: 700; font-size: 14px; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tabs3 a.on { color: var(--text); border-color: var(--accent); }
+  .pane2 { display: none; } .pane2.on { display: block; }
+  .assets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 1000px) { .assets { grid-template-columns: 1fr; } }
+  .slot .pv { height: 150px; border-radius: 12px; border: 1px solid var(--line); display: grid; place-items: center; margin: 10px 0; overflow: hidden;
+    background: repeating-conic-gradient(#d9dce4 0 25%, #ffffff 0 50%) 0 0 / 16px 16px; }
+  .slot .pv img { max-width: 90%; max-height: 90%; }
+  .slot .pv .none { color: #667; font-size: 13px; }
+  .lib2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-top: 10px; }
+  .lib2 div { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: #fff; }
+  .lib2 img { width: 100%; height: 100%; object-fit: contain; }
+  .lib2 button { position: absolute; top: 4px; right: 4px; border: 0; width: 22px; height: 22px; border-radius: 50%; background: rgba(0,0,0,.6); color: #fff; cursor: pointer; }
+  .board-row { display: grid; grid-template-columns: 1fr 140px 36px; gap: 8px; margin-bottom: 8px; }
+  .board-row button { border: 1px solid var(--line2); background: none; color: var(--muted); border-radius: 8px; cursor: pointer; }
+  .conn-box { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 12px; background: var(--panel2); border: 1px solid var(--line); margin: 12px 0; }
+  .conn-box .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--err); flex: none; }
+  .conn-box .dot.on { background: var(--ok); }
+  .conn-box .sp { flex: 1; font-size: 13px; }
+  .howto { font-size: 13px; color: var(--muted); line-height: 1.75; }
+  .howto code { background: var(--panel2); padding: 1px 6px; border-radius: 5px; color: var(--text); }
+  .howto ol { padding-left: 18px; margin: 6px 0; }
+</style>
+</head>
+<body class="shell">
+<header></header>
+<div class="page">
+  <h2 id="orgTitle">학과 설정</h2>
+  <p class="lead">여기서 정한 학과 정보·로고는 포스터, 배너, SNS, 엠블럼, 카페 글에 자동으로 들어갑니다.</p>
+  <nav class="tabs3" id="tabs">
+    <a href="#info" data-t="info">학과 정보</a><a href="#brand" data-t="brand">로고 · 엠블럼</a><a href="#cafe" data-t="cafe">네이버 카페</a><a href="#members" data-t="members">멤버</a>
+  </nav>
+
+  <!-- 학과 정보 -->
+  <section class="pane2" data-t="info">
+    <form class="card" id="infoForm" style="max-width:760px">
+      <div class="grid2">
+        <div><label>학교 이름 *</label><input type="text" name="school" required></div>
+        <div><label>캠퍼스</label><input type="text" name="campus" placeholder="예) 서울강서캠퍼스"></div>
+        <div><label>학과 이름 *</label><input type="text" name="name" required></div>
+        <div><label>영문 이름</label><input type="text" name="name_en" placeholder="예) AI FINTECH CONVERGENCE"></div>
+        <div><label>유튜브 채널 이름</label><input type="text" name="youtube" placeholder="“○○ 검색” 안내에 쓰여요"></div>
+        <div><label>홈페이지 / 원서접수 주소</label><input type="text" name="website" placeholder="www.example.ac.kr"></div>
+      </div>
+      <label>한 줄 소개 (배너에 들어감)</label><input type="text" name="slogan" placeholder="예) 인공지능 · 블록체인 · 웹개발 실무 교육">
+      <label>기본 해시태그 (AI 카페 글에 들어감)</label><input type="text" name="hashtags" placeholder="#학교 #학과 #교육생모집">
+      <div class="inline" style="margin-top:16px"><button class="btn primary">저장</button><span class="status" id="infoStatus"></span></div>
+    </form>
+  </section>
+
+  <!-- 로고 · 엠블럼 -->
+  <section class="pane2" data-t="brand">
+    <div class="assets">
+      <div class="card slot">
+        <h3>학과 로고</h3>
+        <p class="sub">포스터·SNS 위쪽에 들어가는 가로형 로고. 투명 PNG를 권장해요.</p>
+        <div class="pv" id="logoPv"></div>
+        <div class="inline"><button class="btn sm" data-up="logo">⬆ 올리기</button><button class="btn sm ghost" data-clear="logo">기본으로</button></div>
+      </div>
+      <div class="card slot">
+        <h3>심볼 마크</h3>
+        <p class="sub">엠블럼·배너 가운데에 들어가는 학교/학과 심볼.</p>
+        <div class="pv" id="symbolPv"></div>
+        <div class="inline"><button class="btn sm" data-up="symbol">⬆ 올리기</button><button class="btn sm ghost" data-clear="symbol">기본으로</button></div>
+        <label class="check"><input type="checkbox" id="knockout"> 흰 배경 자동으로 지우기 (JPG 엠블럼일 때)</label>
+      </div>
+      <div class="card slot">
+        <h3>자료 이미지</h3>
+        <p class="sub">학교 엠블럼, 캠퍼스 사진 등. 편집기 <b>이미지</b> 탭에서 바로 꺼내 쓸 수 있어요.</p>
+        <button class="btn sm" data-up="library">⬆ 이미지 추가</button>
+        <div class="lib2" id="lib"></div>
+      </div>
+    </div>
+    <input type="file" id="assetFile" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden>
+  </section>
+
+  <!-- 네이버 카페 -->
+  <section class="pane2" data-t="cafe">
+    <div class="grid2" style="align-items:start">
+      <div class="stack">
+        <div class="card">
+          <h3>1. 네이버 계정 연결</h3>
+          <p class="sub">카페에 글을 쓸 네이버 계정(카페 운영자 또는 글쓰기 권한이 있는 멤버)으로 로그인하세요.</p>
+          <div class="conn-box" id="connBox"></div>
+        </div>
+        <form class="card" id="cafeForm">
+          <h3>2. 카페와 게시판</h3>
+          <p class="sub">카페 글쓰기 화면에서 고를 게시판 목록이에요.</p>
+          <label>카페 주소 (표시용)</label><input type="text" name="url" placeholder="https://cafe.naver.com/mycafe">
+          <label>카페 ID (clubid, 숫자) *</label><input type="text" name="clubId" inputmode="numeric" placeholder="예) 14447337">
+          <label>게시판 (이름 · 메뉴 ID)</label>
+          <div id="boards"></div>
+          <button type="button" class="btn sm ghost" id="addBoard">+ 게시판 추가</button>
+          <div class="inline" style="margin-top:16px"><button class="btn primary">저장</button><span class="status" id="cafeStatus"></span></div>
+        </form>
+      </div>
+      <div class="card howto">
+        <h3 style="color:var(--text)">카페 ID · 메뉴 ID 찾는 법</h3>
+        <ol>
+          <li>PC에서 내 카페에 들어가 <b>카페 관리</b>를 누르면 주소에 <code>clubid=12345678</code> 이 보여요. 이 숫자가 <b>카페 ID</b>예요.</li>
+          <li>글을 올릴 게시판을 누르면 주소(또는 게시판 링크)에 <code>menuid=5</code> 같은 숫자가 있어요. 이 숫자가 <b>메뉴 ID</b>예요.</li>
+          <li>상품 게시판에는 API로 글을 쓸 수 없어요.</li>
+        </ol>
+        <h3 style="color:var(--text);margin-top:16px">처음 한 번: 네이버 앱 등록</h3>
+        <p style="margin:6px 0">최고 관리자가 <a href="https://developers.naver.com/apps/#/register" target="_blank" rel="noopener">네이버 개발자센터</a>에서 앱을 하나 등록하고 <b>관리자 › 시스템 설정</b>에 Client ID/Secret을 넣어 두면, 모든 학과가 같이 씁니다.</p>
+        <ol>
+          <li>사용 API: <b>네이버 로그인</b> + <b>카페</b> (API 권한관리에서 카페 체크)</li>
+          <li>서비스 환경: PC 웹 · Callback URL에 아래 주소를 그대로 넣기<br><code id="cbUrl"></code></li>
+          <li>앱이 '개발 중' 상태면 앱 멤버로 등록된 네이버 계정만 연결돼요. 여러 학과가 쓰려면 검수 요청을 하세요.</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- 멤버 -->
+  <section class="pane2" data-t="members">
+    <div class="card">
+      <h3>멤버 추가</h3>
+      <p class="sub">회원가입을 마친 사람의 이메일을 넣으세요. 승인 대기 중이면 바로 승인됩니다.</p>
+      <form class="inline" id="addMember">
+        <input type="email" name="email" placeholder="이메일" required>
+        <select name="role" style="max-width:180px"><option value="editor">편집자</option><option value="viewer">보기·저장</option><option value="manager">학과 관리자</option></select>
+        <button class="btn primary sm">추가</button>
+      </form>
+      <p class="hint"><b>학과 관리자</b> 학과 설정·멤버·카페 연결까지 · <b>편집자</b> 모든 편집기와 카페 글쓰기 · <b>보기·저장</b> 템플릿을 열어 이미지로 저장만 (작업 파일은 못 바꿈)</p>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <table class="list"><thead><tr><th>이름</th><th>이메일</th><th>역할</th><th></th></tr></thead><tbody id="memberRows"></tbody></table>
+    </div>
+  </section>
+</div>
+
+<script src="/api/me.js"></script>
+<script src="js/common.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+let org = null;
+
+// ---------- 탭 ----------
+function showTab() {
+  const t = (location.hash || '#info').slice(1);
+  document.querySelectorAll('#tabs a').forEach((a) => a.classList.toggle('on', a.dataset.t === t));
+  document.querySelectorAll('.pane2').forEach((p) => p.classList.toggle('on', p.dataset.t === t));
+}
+window.addEventListener('hashchange', showTab);
+
+async function load() {
+  const j = await Studio.api('/api/org');
+  org = j.org;
+  $('orgTitle').textContent = `${org.school} · ${org.name}`;
+  // 학과 정보
+  for (const el of $('infoForm').elements) if (el.name) el.value = org[el.name] || '';
+  // 로고 · 심볼
+  renderBrand();
+  // 카페
+  const f = $('cafeForm');
+  f.url.value = org.cafe.url || '';
+  f.clubId.value = org.cafe.clubId || '';
+  $('boards').innerHTML = '';
+  (org.cafe.boards?.length ? org.cafe.boards : [{ name: '', menuId: '' }]).forEach(addBoardRow);
+  renderConn();
+  renderMembers(j.members);
+}
+
+// ---------- 학과 정보 ----------
+$('infoForm').onsubmit = async (e) => {
+  e.preventDefault();
+  const body = Object.fromEntries(new FormData(e.target));
+  try { await Studio.api('/api/org', body); Studio.toast('학과 정보를 저장했어요', 'ok'); setTimeout(() => location.reload(), 600); }
+  catch (err) { $('infoStatus').textContent = err.message; $('infoStatus').className = 'status err'; }
+};
+
+// ---------- 로고 · 심볼 · 자료 ----------
+async function renderBrand() {
+  const base = Studio.isBaseDept();
+  const pv = (box, url, fallbackText) => { $(box).innerHTML = url ? `<img src="${url}" alt="">` : `<span class="none">${fallbackText}</span>`; };
+  pv('logoPv', org.logo, base ? '기본: 원본 전단지에서 자동으로 잘라 씀' : '아직 없어요');
+  $('knockout').checked = org.symbolKnockout;
+  // 심볼은 실제로 쓰일 모양(흰 배경 지운 결과)으로 보여줌
+  window.DEPT = { ...window.DEPT, symbol: org.symbol, symbolKnockout: org.symbolKnockout };
+  Studio._symbol = null;
+  try { pv('symbolPv', await Studio.emblemSymbol()); } catch (e) { pv('symbolPv', '', '아직 없어요'); }
+  try {
+    const j = await Studio.api('/api/images');
+    const mine = j.emblems.filter((x) => x.url.startsWith('/assets/') && !/^(logo|symbol)_/.test(x.name));
+    $('lib').innerHTML = mine.length ? mine.map((x) => `<div><img src="${x.url}" alt=""><button data-del="${Studio.esc(x.name)}" title="지우기">×</button></div>`).join('') : '';
+    $('lib').querySelectorAll('[data-del]').forEach((b) => {
+      b.onclick = async () => { if (!confirm('이 이미지를 지울까요?')) return; await Studio.api('/api/org/asset/' + encodeURIComponent(b.dataset.del), undefined, 'DELETE'); renderBrand(); };
+    });
+  } catch (e) { /* 목록이 없어도 됨 */ }
+}
+
+let upSlot = null;
+document.querySelectorAll('[data-up]').forEach((b) => { b.onclick = () => { upSlot = b.dataset.up; $('assetFile').value = ''; $('assetFile').click(); }; });
+$('assetFile').onchange = async (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  try {
+    let dataUrl = await Studio.loadImageFile(f);
+    if (f.type !== 'image/svg+xml') dataUrl = await Studio.shrinkImage(dataUrl, 2000);
+    const j = await Studio.api('/api/org/asset', { dataUrl, slot: upSlot });
+    if (upSlot === 'logo' || upSlot === 'symbol') org[upSlot] = j.url;
+    Studio.toast('올렸어요', 'ok');
+    renderBrand();
+  } catch (err) { Studio.toast(err.message, 'err'); }
+};
+document.querySelectorAll('[data-clear]').forEach((b) => {
+  b.onclick = async () => {
+    const k = b.dataset.clear;
+    await Studio.api('/api/org', { [k]: '' });
+    org[k] = '';
+    renderBrand();
+  };
+});
+$('knockout').onchange = async (e) => {
+  await Studio.api('/api/org', { symbolKnockout: e.target.checked });
+  org.symbolKnockout = e.target.checked;
+  renderBrand();
+};
+
+// ---------- 카페 ----------
+function addBoardRow(b = {}) {
+  const row = document.createElement('div');
+  row.className = 'board-row';
+  row.innerHTML = `<input type="text" placeholder="게시판 이름 (예: 공지사항)" value="${Studio.esc(b.name || '')}"><input type="text" inputmode="numeric" placeholder="메뉴 ID" value="${Studio.esc(b.menuId || '')}"><button type="button" title="빼기">×</button>`;
+  row.querySelector('button').onclick = () => row.remove();
+  $('boards').append(row);
+}
+$('addBoard').onclick = () => addBoardRow();
+$('cafeForm').onsubmit = async (e) => {
+  e.preventDefault();
+  const f = e.target;
+  const boards = [...$('boards').querySelectorAll('.board-row')].map((r) => { const [n, m] = r.querySelectorAll('input'); return { name: n.value, menuId: m.value }; });
+  try {
+    const j = await Studio.api('/api/org', { cafe: { url: f.url.value, clubId: f.clubId.value, boards } });
+    org = j.org;
+    $('cafeStatus').textContent = '✅ 저장했어요'; $('cafeStatus').className = 'status ok';
+  } catch (err) { $('cafeStatus').textContent = err.message; $('cafeStatus').className = 'status err'; }
+};
+
+function renderConn() {
+  const nv = org.naver;
+  $('connBox').innerHTML = nv.connected
+    ? `<span class="dot on"></span><span class="sp">연결됨 · <b>${Studio.esc(nv.name || '네이버 계정')}</b></span><a class="btn sm ghost" href="/api/naver/login">다시 연결</a><button class="btn sm danger" id="disc">연결 끊기</button>`
+    : `<span class="dot"></span><span class="sp">연결되지 않았어요</span><a class="btn sm primary" href="/api/naver/login">네이버로 연결</a>`;
+  const disc = $('disc');
+  if (disc) disc.onclick = async () => { if (!confirm('네이버 연결을 끊을까요?')) return; await Studio.api('/api/naver/disconnect', {}); org.naver = { connected: false }; renderConn(); };
+}
+
+// ---------- 멤버 ----------
+function renderMembers(list) {
+  $('memberRows').innerHTML = list.map((m) => `
+    <tr><td>${Studio.esc(m.name)} ${m.status !== 'active' ? `<span class="chip ${m.status}">${m.status === 'pending' ? '승인 대기' : '중지'}</span>` : ''}</td>
+      <td><small>${Studio.esc(m.email)}</small></td>
+      <td><select data-role="${m.id}">${['manager', 'editor', 'viewer'].map((r) => `<option value="${r}" ${r === m.role ? 'selected' : ''}>${Studio.ROLE_NAMES[r]}</option>`).join('')}</select></td>
+      <td style="text-align:right"><button class="btn sm danger" data-rm="${m.id}">빼기</button></td></tr>`).join('') || '<tr><td colspan="4" class="empty">멤버가 없어요</td></tr>';
+  document.querySelectorAll('[data-role]').forEach((s) => {
+    s.onchange = async () => { try { await Studio.api('/api/org/members/' + s.dataset.role, { role: s.value }); Studio.toast('역할을 바꿨어요', 'ok'); } catch (e) { Studio.toast(e.message, 'err'); load(); } };
+  });
+  document.querySelectorAll('[data-rm]').forEach((b) => {
+    b.onclick = async () => { if (!confirm('이 학과에서 뺄까요?')) return; try { await Studio.api('/api/org/members/' + b.dataset.rm, undefined, 'DELETE'); load(); } catch (e) { Studio.toast(e.message, 'err'); } };
+  });
+}
+$('addMember').onsubmit = async (e) => {
+  e.preventDefault();
+  try { await Studio.api('/api/org/members', Object.fromEntries(new FormData(e.target))); e.target.reset(); Studio.toast('추가했어요', 'ok'); load(); }
+  catch (err) { Studio.toast(err.message, 'err'); }
+};
+
+// 네이버 로그인에서 돌아왔을 때
+const nv = new URLSearchParams(location.search).get('naver');
+if (nv) {
+  Studio.toast(nv === 'ok' ? '네이버 계정을 연결했어요' : nv, nv === 'ok' ? 'ok' : 'err');
+  history.replaceState(null, '', location.pathname + location.hash);
+}
+Studio.api('/api/naver/callback-url').then((j) => { $('cbUrl').textContent = j.url; }).catch(() => {});
+showTab();
+load().catch((e) => Studio.toast(e.message, 'err'));
+</script>
+</body>
+</html>
